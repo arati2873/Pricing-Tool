@@ -16,11 +16,34 @@ from sklearn.preprocessing import MinMaxScaler
 # Set up page
 st.set_page_config(page_title="Price Revision Tool", layout="wide")
 st.title("📈 Intelligent Price Revision Tool")
-st.markdown("""
-> ℹ️ **New to this tool?**  
-Please refer to the [📘 README Guide on GitHub](https://github.com/arati2873/Pricing-Tool/blob/main/README.md)  
-to learn how to prepare the 6 input files, usage logic, and interpretation.
-""")
+with st.expander("❓ How to Use This Tool (Click to Expand)"):
+    st.markdown("""
+    ### 📘 Required Inputs
+    This tool requires 6 CSV files:
+    1. **cost_file.csv** – Cost data by SKU
+    2. **sales_data_1.csv** – Recent sales data (e.g., last 6 months or 1 year)
+    3. **sales_data_2.csv** – Previous period sales (e.g., 6 months before `sales_data_1`)
+    4. **standard_selling_price.csv** – Current prices by SKU
+    5. **monthly_sales.csv** – Monthly sales quantity and ASP by SKU
+    6. **product_classification.csv** – Classification mapping (Family, Group, etc.)
+
+    ➡️ Make sure **column headers are not changed** from the provided templates.
+
+    ---
+
+    ### ⚙️ How It Works
+    - Upload all required files from the sidebar
+    - Adjust scoring weights if needed
+    - Set global or override % increase
+    - Download SKU-level recommended pricing
+
+    ---
+
+    📂 You can [download sample input files here](https://github.com/arati2873/Pricing-Tool/tree/main/Sample%20data)
+
+    📄 Full user guide available in the [README](https://github.com/arati2873/Pricing-Tool/blob/main/README.md)
+    """)
+
 
 
 # Step 1: Upload files
