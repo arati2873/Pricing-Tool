@@ -17,13 +17,13 @@ Please make sure all 6 input files are placed in a single folder. The file names
 → Latest 6 or 12 months sales data (e.g., Jan–Jun 2024 or full year)
 
 3️⃣ **sales_data_2.csv**  
-→ Previous 6 or 12 months sales data (e.g., Jul–Dec 2023 or Y-2 year)
+→ Previous 6 or 12 months sales data (e.g., Jul–Dec 2023 or previous periods from sales_data_1.csv, timeframe should be similar, this is used to calculate revenue growth and gross margin(GM) growth)
 
 4️⃣ **standard_selling_price.csv**  
 → Current selling prices per SKU
 
 5️⃣ **monthly_sales.csv**  
-→ Monthly sales data with Month, SKU, Qty, ASP  
+→ Monthly sales data with Month, SKU, Qty, ASP(Average selling price)  
 → Ensure months are in full names (e.g., Jan, Feb, ... Dec)
 
 6️⃣ **product_classification.csv**  
