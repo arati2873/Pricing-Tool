@@ -16,6 +16,11 @@ from sklearn.preprocessing import MinMaxScaler
 # Set up page
 st.set_page_config(page_title="Price Revision Tool", layout="wide")
 st.title("📈 Intelligent Price Revision Tool")
+st.markdown("""
+> ℹ️ **New to this tool?**  
+Please refer to the [📘 README Guide on GitHub](https://github.com/arati2873/Pricing-Tool/blob/main/README.md)  
+to learn how to prepare the 6 input files, usage logic, and interpretation.
+""")
 
 
 # Step 1: Upload files
