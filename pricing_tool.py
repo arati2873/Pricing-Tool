@@ -17,34 +17,24 @@ from sklearn.preprocessing import MinMaxScaler
 st.set_page_config(page_title="Price Revision Tool", layout="wide")
 st.title("📈 Intelligent Price Revision Tool")
 
+
 # Step 1: Upload files
-folder_path = st.sidebar.text_input("📂 Enter folder path (e.g., C:/Users/YourName/Folder):")
+st.sidebar.markdown("### 📤 Upload Required Files")
 
-if folder_path:
-    required_files = {
-        "Cost File": "cost_file.csv",
-        "Sales Data 1": "sales_data_1.csv",
-        "Sales Data 2": "sales_data_2.csv",
-        "Price Today": "standard_selling_price.csv",
-        "Monthly Sales": "monthly_sales.csv",
-        "Product Classification": "product_classification.csv"
-    }
+uploaded_files = {
+    "Cost File": st.sidebar.file_uploader("Upload cost_file.csv", type="csv"),
+    "Sales Data 1": st.sidebar.file_uploader("Upload sales_data_1.csv", type="csv"),
+    "Sales Data 2": st.sidebar.file_uploader("Upload sales_data_2.csv", type="csv"),
+    "Price Today": st.sidebar.file_uploader("Upload standard_selling_price.csv", type="csv"),
+    "Monthly Sales": st.sidebar.file_uploader("Upload monthly_sales.csv", type="csv"),
+    "Product Classification": st.sidebar.file_uploader("Upload product_classification.csv", type="csv")
+}
 
-    file_paths = {}
-    missing = []
-    for label, fname in required_files.items():
-        fpath = os.path.join(folder_path, fname)
-        if os.path.exists(fpath):
-            file_paths[label] = fpath
-        else:
-            missing.append(fname)
-
-    if missing:
-        st.sidebar.error(f"Missing files: {', '.join(missing)}")
-        data_loaded = False
-    else:
-        data_loaded = True
+if all(uploaded_files.values()):
+    data_loaded = True
+    file_paths = uploaded_files
 else:
+    #st.warning("⚠️ Please upload all six input files to continue.")
     data_loaded = False
 
     
