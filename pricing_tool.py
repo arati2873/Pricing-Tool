@@ -16,6 +16,22 @@ from sklearn.preprocessing import MinMaxScaler
 # Set up page
 st.set_page_config(page_title="Price Revision Tool", layout="wide")
 st.title("📈 Intelligent Price Revision Tool")
+
+st.info("🔒 Your data is not stored or shared. Files are processed securely within your session for analysis only.")
+
+st.sidebar.markdown("[🛒 Buy Access - $999](https://yadavarati.gumroad.com/l/IntelligentPriceRevisionTool)")
+
+# --- Access Gate ---
+ACCESS_CODE = "AY_2181_RY_999_SY"
+
+with st.expander("🔐 Enter Access Code to Unlock the Tool"):
+    user_code = st.text_input("Access Code", type="password")
+
+if user_code != ACCESS_CODE:
+    st.warning("This is a premium tool. Please enter a valid access code to continue.")
+    st.stop()
+
+
 with st.expander("❓ How to Use This Tool (Click to Expand)"):
     st.markdown("""
     ### 📘 Required Inputs
