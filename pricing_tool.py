@@ -19,7 +19,7 @@ st.title("📈 Intelligent Price Revision Tool")
 
 st.info("🔒 Your data is not stored or shared. Files are processed securely within your session for analysis only.")
 
-st.sidebar.markdown("[🛒 Buy Access - $20](https://yadavarati.gumroad.com/l/IntelligentPriceRevisionTool)")
+st.sidebar.markdown("[🛒 Buy Access - $99](https://yadavarati.gumroad.com/l/IntelligentPriceRevisionTool)")
 
 # --- Access Gate ---
 ACCESS_CODE = "AY_2181_RY_999_SY"
