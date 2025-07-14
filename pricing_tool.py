@@ -22,7 +22,7 @@ st.info("🔒 Your data is not stored or shared. Files are processed securely wi
 st.sidebar.markdown("[🛒 Buy Access - $99](https://yadavarati.gumroad.com/l/IntelligentPriceRevisionTool)")
 
 # --- Access Gate ---
-ACCESS_CODE = "AY_2181_RY_999_SY"
+ACCESS_CODE = "A"
 
 with st.expander("🔐 Enter Access Code to Unlock the Tool"):
     user_code = st.text_input("Access Code", type="password")
@@ -162,32 +162,61 @@ def summarize_revenue(df, group_col):
 
 
 # --- Main Logic ---
-if data_loaded:
-    cost_df = pd.read_csv(file_paths["Cost File"])
-    sales_1 = pd.read_csv(file_paths["Sales Data 1"])
-    sales_2 = pd.read_csv(file_paths["Sales Data 2"])
-    price_today = pd.read_csv(file_paths["Price Today"])
-    monthly_sales = pd.read_csv(file_paths["Monthly Sales"])
-    product_class = pd.read_csv(file_paths["Product Classification"])
+# 🧼 Sanitize all inputs
+def clean_column_names(df):
+    df.columns = df.columns.str.strip()
+    return df
 
-    df = sales_1.merge(sales_2, on='SKU', suffixes=('_1', '_2'))
+def clean_sku_column(df):
+    df['SKU'] = df['SKU'].astype(str).str.strip().str.upper()
+    return df
+
+def clean_numeric_column(df, col):
+    df[col] = pd.to_numeric(df[col], errors='coerce')
+    return df
+
+if data_loaded:
+    cost_df = clean_column_names(pd.read_csv(file_paths["Cost File"]))
+    sales_1 = clean_column_names(pd.read_csv(file_paths["Sales Data 1"]))
+    sales_2 = clean_column_names(pd.read_csv(file_paths["Sales Data 2"]))
+    price_today = clean_column_names(pd.read_csv(file_paths["Price Today"]))
+    monthly_sales = clean_column_names(pd.read_csv(file_paths["Monthly Sales"]))
+    product_class = clean_column_names(pd.read_csv(file_paths["Product Classification"]))
+
+    # 🧼 Clean SKU
+    for df in [cost_df, sales_1, sales_2, price_today, product_class, monthly_sales]:
+        df = clean_sku_column(df)
+
+    # ✅ Merge
+    df = sales_1.merge(sales_2, on='SKU', how='left', suffixes=('_1', '_2'))
     df = df.merge(cost_df, on='SKU', how='left')
     df = df.merge(price_today, on='SKU', how='left')
     df = df.merge(product_class, on='SKU', how='left')
 
+    # 🧼 Ensure numeric
+    #numeric_cols = ['Revenue_1', 'Revenue_2', 'GM%_1', 'GM%_2', 'GM_1', 'GM_2', 'ASP_1', 'ASP_2','TTL_Cost','Qty','Cost_per_Unit']
+    #for col in numeric_cols:
+     #   df = clean_numeric_column(df, col)
+
+    # ✅ Calculations
     df['Sales_Growth_%'] = ((df['Revenue_1'] - df['Revenue_2']) / df['Revenue_2']) * 100
     df['GM%_Change'] = df['GM%_1'] - df['GM%_2']
     df['Price_Change_%'] = ((df['ASP_1'] - df['ASP_2']) / df['ASP_2']) * 100
     df['GM_Abs_Change'] = df['GM_1'] - df['GM_2']
 
+    # ✅ Monthly Trends Pivot
     monthly_sales['Month'] = pd.Categorical(
         monthly_sales['Month'],
         categories=["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
         ordered=True
     )
+
     pivot = monthly_sales.pivot_table(index='SKU', columns='Month', values=['Qty', 'ASP'])
+
+    # Identify valid first and last month
     first_month = pivot['Qty'].columns[pivot['Qty'].notna().any()].min()
     last_month = pivot['Qty'].columns[pivot['Qty'].notna().any()].max()
+
     qty_change = ((pivot['Qty'][last_month] - pivot['Qty'][first_month]) / pivot['Qty'][first_month]) * 100
     asp_change = ((pivot['ASP'][last_month] - pivot['ASP'][first_month]) / pivot['ASP'][first_month]) * 100
 
@@ -196,7 +225,76 @@ if data_loaded:
     df['ASP_Change_%'] = asp_change
     df['Elasticity'] = df['Qty_Change_%'] / df['ASP_Change_%'].replace(0, np.nan)
     df['Elasticity'] = df['Elasticity'].fillna(df['Elasticity'].median())
+    df = df.reset_index()    # Fill missing values in Revenue & ASP
+    df['Revenue_1'] = df['Revenue_1'].fillna(0)
+    df['Revenue_2'] = df['Revenue_2'].fillna(0)
+    df['ASP_1'] = df['ASP_1'].replace(0, np.nan)
+    df['ASP_2'] = df['ASP_2'].replace(0, np.nan)
+    df['GM%_1'] = df['GM%_1'].fillna(0)
+    df['GM%_2'] = df['GM%_2'].fillna(0)
+    df['GM_1'] = df['GM_1'].fillna(0)
+    df['GM_2'] = df['GM_2'].fillna(0)
+    df['Cost_Change_%'] = df['Cost_Change_%'].fillna(0)
+    df['Cost_Per_Unit_1'] = df['Cost_Per_Unit_1'].fillna(0)
+    df['Cost_Per_Unit_2'] = df['Cost_Per_Unit_2'].fillna(0)
+    df['TTL_Cost'] = df['TTL_Cost'].fillna(0)
+
+    # Revenue Growth %
+    df['Sales_Growth_%'] = np.where(
+        (df['Revenue_1'] == 0) | (df['Revenue_2'] == 0),
+        0,
+        ((df['Revenue_1'] - df['Revenue_2']) / df['Revenue_2']) * 100
+    )
+
+    # GM% Change
+    df['GM%_Change'] = df['GM%_1'] - df['GM%_2']
+
+    # Price Change %
+    df['Price_Change_%'] = np.where(
+        df['ASP_2'].isna(),
+        0,
+        ((df['ASP_1'] - df['ASP_2']) / df['ASP_2']) * 100
+    )
+
+    # GM Absolute Change
+    df['GM_Abs_Change'] = df['GM_1'] - df['GM_2']
+
+    # Handle Monthly Sales Data
+    monthly_sales['Month'] = pd.Categorical(
+        monthly_sales['Month'],
+        categories=["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+        ordered=True
+    )
+    pivot = monthly_sales.pivot_table(index='SKU', columns='Month', values=['Qty', 'ASP'])
+
+    # Detect valid months
+    first_month = pivot['Qty'].columns[pivot['Qty'].notna().any()].min()
+    last_month = pivot['Qty'].columns[pivot['Qty'].notna().any()].max()
+
+    # Calculate Qty and ASP changes
+    qty_change = ((pivot['Qty'][last_month] - pivot['Qty'][first_month]) / pivot['Qty'][first_month]) * 100
+    asp_change = ((pivot['ASP'][last_month] - pivot['ASP'][first_month]) / pivot['ASP'][first_month]) * 100
+
+    # Add to master DF
+    df = df.set_index('SKU')
+    df['Qty_Change_%'] = qty_change
+    df['ASP_Change_%'] = asp_change
+
+    # Fill missing with 0 if needed
+    df['Qty_Change_%'] = df['Qty_Change_%'].fillna(0)
+    df['ASP_Change_%'] = df['ASP_Change_%'].replace(0, np.nan)
+
+    # Elasticity
+    df['Elasticity'] = df['Qty_Change_%'] / df['ASP_Change_%']
+    df['Elasticity'] = df['Elasticity'].fillna(df['Elasticity'].median())
+
+    # If ASP_Change is 0 or NaN, Elasticity = 0 (or use median as above)
     df = df.reset_index()
+
+    # Show preview
+    st.subheader("✅ Merged & Calculated Data Sample")
+    st.dataframe(df.head(10))
+
 
     def scale_score(series): return MinMaxScaler(feature_range=(1, 15)).fit_transform(series.values.reshape(-1, 1)).flatten()
     def scale_score_inverse(series): return 16 - scale_score(series)
@@ -476,7 +574,36 @@ if data_loaded:
     fig4.update_layout(xaxis_tickformat=".2f", yaxis_tickformat=".2f")
 
     st.plotly_chart(fig4, use_container_width=True)
+    
+     # 5️⃣ Revenue Curve vs Price Increase %
+    # --------------------------------------------
+    fig5 = px.scatter(
+        df,
+        x='Assigned_Price_Increase_%',
+        y='New_Revenue',
+        size='Revenue_1',
+        color='Product_Family',
+        title='📈 Revenue Curve by Price Increase %',
+        labels={
+            'Assigned_Price_Increase_%': 'Price Increase (%)',
+            'New_Revenue': 'Estimated New Revenue',
+            'Revenue_1': 'Base Revenue'
+        },
+        hover_data=['SKU', 'Total_Score', 'Price_Today']
+    )
+    fig5.update_traces(marker=dict(opacity=0.7, line=dict(width=0.5, color='gray')))
+    st.plotly_chart(fig5, use_container_width=True)
 
+    # ⬇️ Download CSV with all scoring logic
+    csv_score_details = df[[
+        'SKU', 'Sales_Growth_%', 'GM%_Change', 'Elasticity', 'Cost_Change_%', 'GM_Abs_Change',
+        'Score_Sales_Growth', 'Score_GM_Change', 'Score_Elasticity',
+        'Score_Cost_Change', 'Score_GM_Abs_Change', 'Total_Score',
+        'Assigned_Price_Increase_%', 'Price_Today', 'New_Price', 'Revenue_1', 'New_Revenue'
+    ]].round(2).to_csv(index=False)
+
+    st.download_button("📥 Download Detailed Scoring Sheet", data=csv_score_details,
+                       file_name="SKU_Score_Details.csv")
 
 
     csv = df[['SKU', 'Product_Family', 'Price_Today', 'Assigned_Price_Increase_%',
