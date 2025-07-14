@@ -202,6 +202,11 @@ if data_loaded:
     df['Price_Change_%'] = ((df['ASP_1'] - df['ASP_2']) / df['ASP_2']) * 100
     df['GM_Abs_Change'] = df['GM_1'] - df['GM_2']
     # Calculate % change in Qty and ASP
+    
+    df['Qty_1'] = pd.to_numeric(df['Qty_1'], errors='coerce')
+    df['Qty_2'] = pd.to_numeric(df['Qty_2'], errors='coerce')
+
+    
     df['Qty_Change_%'] = ((df['Qty_1'] - df['Qty_2']) / df['Qty_2'].replace(0, np.nan)) * 100
     df['ASP_Change_%'] = ((df['ASP_1'] - df['ASP_2']) / df['ASP_2'].replace(0, np.nan)) * 100
 
@@ -223,6 +228,10 @@ if data_loaded:
     df['Cost_Per_Unit_1'] = df['Cost_Per_Unit_1'].fillna(0)
     df['Cost_Per_Unit_2'] = df['Cost_Per_Unit_2'].fillna(0)
     df['TTL_Cost'] = df['TTL_Cost'].fillna(0)
+    df['Qty_1'] = df['Qty_1'].fillna(0)
+    df['Qty_2'] = df['Qty_2'].fillna(0)
+    df['ASP_1'] = df['ASP_1'].fillna(0)
+    df['ASP_2'] = df['ASP_2'].fillna(0)
 
 
 
