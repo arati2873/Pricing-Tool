@@ -245,15 +245,22 @@ if data_loaded:
 
     from sklearn.preprocessing import MinMaxScaler
 
-    def scale_familywise(df, col):
+    def scale_familywise(df, col, inverse=False):
         scaled = []
         for family in df['Product_Family'].unique():
             subset = df[df['Product_Family'] == family]
-            values = pd.to_numeric(subset[col], errors='coerce').fillna(0).values.reshape(-1, 1)  # ⬅ Ensure numeric
+            values = pd.to_numeric(subset[col], errors='coerce').fillna(0).values.reshape(-1, 1)
             scaler = MinMaxScaler()
             scaled_vals = scaler.fit_transform(values).flatten()
+
+            # Invert scale if needed (i.e., higher cost increase gets lower score)
+            if inverse:
+                scaled_vals = 1 - scaled_vals
+
             scaled.extend(scaled_vals)
+
         return pd.Series(scaled, index=df.index)
+
 
 
     df['Score_Sales_Growth'] = scale_familywise(df, 'Sales_Growth_%')
