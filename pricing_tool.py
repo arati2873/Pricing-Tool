@@ -234,6 +234,16 @@ if data_loaded:
     df['ASP_2'] = df['ASP_2'].fillna(0)
     df['Sales_Growth_%'] = df['Sales_Growth_%'].fillna(0)
 
+    if 'Cost_Change_%' in df.columns and df['Cost_Change_%'].notna().any():
+        df['Score_Cost_Change'] = scale_familywise(df, 'Cost_Change_%', inverse=True)
+    else:
+        df['Score_Cost_Change'] = 0
+        
+    if 'Sales_Growth_%' in df.columns and df['Sales_Growth_%'].notna().any():
+        df['Score_Cost_Change'] = scale_familywise(df, 'Sales_Growth_%', inverse=True)
+    else:
+        df['Score_Cost_Change'] = 0
+
 
 
     # Show preview
