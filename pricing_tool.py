@@ -300,18 +300,24 @@ if data_loaded:
     def scale_score_inverse(series): return 16 - scale_score(series)
 
     def scale_familywise(df, col, inverse=False):
-        scaled = []
+        scaled_series = pd.Series(index=df.index, dtype=float)
+
         for fam, group in df.groupby('Product_Family'):
+            idx = group.index
             values = group[col].values.reshape(-1, 1)
+
             if len(values) > 1:
                 scaler = MinMaxScaler(feature_range=(1, 15))
                 scaled_vals = scaler.fit_transform(values).flatten()
                 if inverse:
                     scaled_vals = 16 - scaled_vals
             else:
-                scaled_vals = np.array([8])  # Midpoint for single-item families
-            scaled.extend(scaled_vals)
-        return pd.Series(scaled, index=df.index)
+                scaled_vals = np.array([8])  # Midpoint
+
+            scaled_series.loc[idx] = scaled_vals
+
+        return scaled_series
+
 
     df['Score_Sales_Growth'] = scale_familywise(df, 'Sales_Growth_%')
     df['Score_Cost_Change'] = scale_familywise(df, 'Cost_Change_%', inverse=True)
@@ -423,7 +429,16 @@ if data_loaded:
     df['New_Revenue'] = df['Revenue_1'] * (1 + df['Assigned_Price_Increase_%'] / 100)
 
     #df['TTL_Cost'] = df['Revenue_1'] * (1 - df['GM%_1'] / 100)
+    # Clean and convert relevant columns to numeric
+    df['TTL_Cost'] = pd.to_numeric(df['TTL_Cost'], errors='coerce')
+    df['Cost_Change_%'] = pd.to_numeric(df['Cost_Change_%'], errors='coerce')
+
+    # Now safely perform the calculation
     df['Theoretical_New_Cost'] = df['TTL_Cost'] * (1 + df['Cost_Change_%'] / 100)
+
+    # Optional: Fill NaNs if any
+    df['Theoretical_New_Cost'] = df['Theoretical_New_Cost'].fillna(0)
+
     df['New_Cost'] = df['TTL_Cost'] + (df['Theoretical_New_Cost'] - df['TTL_Cost']) * impact_fraction
     #df.drop(columns=['Theoretical_New_Cost'], inplace=True)
 
