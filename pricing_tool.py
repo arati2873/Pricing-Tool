@@ -70,7 +70,6 @@ uploaded_files = {
     "Sales Data 1": st.sidebar.file_uploader("Upload sales_data_1.csv", type="csv"),
     "Sales Data 2": st.sidebar.file_uploader("Upload sales_data_2.csv", type="csv"),
     "Price Today": st.sidebar.file_uploader("Upload standard_selling_price.csv", type="csv"),
-    "Monthly Sales": st.sidebar.file_uploader("Upload monthly_sales.csv", type="csv"),
     "Product Classification": st.sidebar.file_uploader("Upload product_classification.csv", type="csv")
 }
 
@@ -78,7 +77,7 @@ if all(uploaded_files.values()):
     data_loaded = True
     file_paths = uploaded_files
 else:
-    #st.warning("⚠️ Please upload all six input files to continue.")
+    #st.warning("⚠️ Please upload all five input files to continue.")
     data_loaded = False
 
     
@@ -180,11 +179,10 @@ if data_loaded:
     sales_1 = clean_column_names(pd.read_csv(file_paths["Sales Data 1"]))
     sales_2 = clean_column_names(pd.read_csv(file_paths["Sales Data 2"]))
     price_today = clean_column_names(pd.read_csv(file_paths["Price Today"]))
-    monthly_sales = clean_column_names(pd.read_csv(file_paths["Monthly Sales"]))
     product_class = clean_column_names(pd.read_csv(file_paths["Product Classification"]))
 
     # 🧼 Clean SKU
-    for df in [cost_df, sales_1, sales_2, price_today, product_class, monthly_sales]:
+    for df in [cost_df, sales_1, sales_2, price_today, product_class]:
         df = clean_sku_column(df)
 
     # ✅ Merge
@@ -203,29 +201,16 @@ if data_loaded:
     df['GM%_Change'] = df['GM%_1'] - df['GM%_2']
     df['Price_Change_%'] = ((df['ASP_1'] - df['ASP_2']) / df['ASP_2']) * 100
     df['GM_Abs_Change'] = df['GM_1'] - df['GM_2']
+    # Calculate % change in Qty and ASP
+    df['Qty_Change_%'] = ((df['Qty_1'] - df['Qty_2']) / df['Qty_2'].replace(0, np.nan)) * 100
+    df['ASP_Change_%'] = ((df['ASP_1'] - df['ASP_2']) / df['ASP_2'].replace(0, np.nan)) * 100
 
-    # ✅ Monthly Trends Pivot
-    monthly_sales['Month'] = pd.Categorical(
-        monthly_sales['Month'],
-        categories=["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
-        ordered=True
-    )
+    # Handle NaNs or inf values
+    df['Qty_Change_%'] = df['Qty_Change_%'].replace([np.inf, -np.inf], 0).fillna(0)
+    df['ASP_Change_%'] = df['ASP_Change_%'].replace([np.inf, -np.inf], 0).fillna(0)
 
-    pivot = monthly_sales.pivot_table(index='SKU', columns='Month', values=['Qty', 'ASP'])
 
-    # Identify valid first and last month
-    first_month = pivot['Qty'].columns[pivot['Qty'].notna().any()].min()
-    last_month = pivot['Qty'].columns[pivot['Qty'].notna().any()].max()
 
-    qty_change = ((pivot['Qty'][last_month] - pivot['Qty'][first_month]) / pivot['Qty'][first_month]) * 100
-    asp_change = ((pivot['ASP'][last_month] - pivot['ASP'][first_month]) / pivot['ASP'][first_month]) * 100
-
-    df = df.set_index('SKU')
-    df['Qty_Change_%'] = qty_change
-    df['ASP_Change_%'] = asp_change
-    df['Elasticity'] = df['Qty_Change_%'] / df['ASP_Change_%'].replace(0, np.nan)
-    df['Elasticity'] = df['Elasticity'].fillna(df['Elasticity'].median())
-    df = df.reset_index()    # Fill missing values in Revenue & ASP
     df['Revenue_1'] = df['Revenue_1'].fillna(0)
     df['Revenue_2'] = df['Revenue_2'].fillna(0)
     df['ASP_1'] = df['ASP_1'].replace(0, np.nan)
@@ -239,61 +224,11 @@ if data_loaded:
     df['Cost_Per_Unit_2'] = df['Cost_Per_Unit_2'].fillna(0)
     df['TTL_Cost'] = df['TTL_Cost'].fillna(0)
 
-    # Revenue Growth %
-    df['Sales_Growth_%'] = np.where(
-        (df['Revenue_1'] == 0) | (df['Revenue_2'] == 0),
-        0,
-        ((df['Revenue_1'] - df['Revenue_2']) / df['Revenue_2']) * 100
-    )
 
-    # GM% Change
-    df['GM%_Change'] = df['GM%_1'] - df['GM%_2']
-
-    # Price Change %
-    df['Price_Change_%'] = np.where(
-        df['ASP_2'].isna(),
-        0,
-        ((df['ASP_1'] - df['ASP_2']) / df['ASP_2']) * 100
-    )
-
-    # GM Absolute Change
-    df['GM_Abs_Change'] = df['GM_1'] - df['GM_2']
-
-    # Handle Monthly Sales Data
-    monthly_sales['Month'] = pd.Categorical(
-        monthly_sales['Month'],
-        categories=["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
-        ordered=True
-    )
-    pivot = monthly_sales.pivot_table(index='SKU', columns='Month', values=['Qty', 'ASP'])
-
-    # Detect valid months
-    first_month = pivot['Qty'].columns[pivot['Qty'].notna().any()].min()
-    last_month = pivot['Qty'].columns[pivot['Qty'].notna().any()].max()
-
-    # Calculate Qty and ASP changes
-    qty_change = ((pivot['Qty'][last_month] - pivot['Qty'][first_month]) / pivot['Qty'][first_month]) * 100
-    asp_change = ((pivot['ASP'][last_month] - pivot['ASP'][first_month]) / pivot['ASP'][first_month]) * 100
-
-    # Add to master DF
-    df = df.set_index('SKU')
-    df['Qty_Change_%'] = qty_change
-    df['ASP_Change_%'] = asp_change
-
-    # Fill missing with 0 if needed
-    df['Qty_Change_%'] = df['Qty_Change_%'].fillna(0)
-    df['ASP_Change_%'] = df['ASP_Change_%'].replace(0, np.nan)
-
-    # Elasticity
-    df['Elasticity'] = df['Qty_Change_%'] / df['ASP_Change_%']
-    df['Elasticity'] = df['Elasticity'].fillna(df['Elasticity'].median())
-
-    # If ASP_Change is 0 or NaN, Elasticity = 0 (or use median as above)
-    df = df.reset_index()
 
     # Show preview
-    st.subheader("✅ Merged & Calculated Data Sample")
-    st.dataframe(df.head(10))
+    #st.subheader("✅ Merged & Calculated Data Sample")
+    #st.dataframe(df.head(10))
 
 
     def scale_score(series): return MinMaxScaler(feature_range=(1, 15)).fit_transform(series.values.reshape(-1, 1)).flatten()
@@ -322,8 +257,10 @@ if data_loaded:
     df['Score_Sales_Growth'] = scale_familywise(df, 'Sales_Growth_%')
     df['Score_Cost_Change'] = scale_familywise(df, 'Cost_Change_%', inverse=True)
     df['Score_GM_Change'] = scale_familywise(df, 'GM%_Change')
-    df['Score_Elasticity'] = scale_familywise(df, 'Elasticity', inverse=True)
+    #df['Score_Elasticity'] = scale_familywise(df, 'Elasticity', inverse=True)
     df['Score_GM_Abs_Change'] = scale_familywise(df, 'GM_Abs_Change')
+    df['Score_Qty_Change'] = scale_familywise(df, 'Qty_Change_%')
+    df['Score_ASP_Change'] = scale_familywise(df, 'ASP_Change_%')
 
 
     # 2. Use a visible checkbox toggle with label
@@ -331,9 +268,9 @@ if data_loaded:
 
     # 3. Define presets
     preset_options = {
-        "Balanced (Default)": {"Sales_Growth": 20, "Cost_Change": 15, "GM_Change": 20, "Elasticity": 30, "GM_Abs_Change": 15},
-        "Aggressive (Push ASP)": {"Sales_Growth": 10, "Cost_Change": 10, "GM_Change": 15, "Elasticity": 50, "GM_Abs_Change": 15},
-        "Defensive (Protect GM)": {"Sales_Growth": 30, "Cost_Change": 25, "GM_Change": 25, "Elasticity": 10, "GM_Abs_Change": 10},
+        "Balanced (Default)": {"Sales_Growth": 10, "Cost_Change": 10, "GM%_Change": 10, "Qty_Change": 10,"ASP_Change": 10, "GM_Abs_Change": 10},
+        "Aggressive (Push ASP)": {"Sales_Growth": 20, "Cost_Change": 10, "GM%_Change": 15, "Qty_Change": 50,"ASP_Change": 30, "GM_Abs_Change": 15},
+        "Defensive (Protect GM)": {"Sales_Growth": 30, "Cost_Change": 25, "GM%_Change": 25, "Qty_Change": 10,"ASP_Change": 30, "GM_Abs_Change": 10},
     }
 
     # 4. Session state to store current weights
@@ -385,9 +322,11 @@ if data_loaded:
     df['Total_Score'] = (
         df['Score_Sales_Growth'] * normalized_weights['Sales_Growth'] +
         df['Score_Cost_Change'] * normalized_weights['Cost_Change'] +
-        df['Score_GM_Change'] * normalized_weights['GM_Change'] +
-        df['Score_Elasticity'] * normalized_weights['Elasticity'] +
-        df['Score_GM_Abs_Change'] * normalized_weights['GM_Abs_Change']
+        df['Score_GM_Change'] * normalized_weights['GM%_Change'] +
+        #df['Score_Elasticity'] * normalized_weights['Elasticity'] +
+        df['Score_GM_Abs_Change'] * normalized_weights['GM_Abs_Change']+
+        df['Score_Qty_Change'] * normalized_weights['Qty_Change']+
+        df['Score_ASP_Change'] * normalized_weights['ASP_Change']
     )
 
 
@@ -524,19 +463,62 @@ if data_loaded:
     # --------------------------------------------
     # 1️⃣ Revenue Before vs After (Grouped Bar)
     # --------------------------------------------
-    melted = viz_df.melt(id_vars='Product_Family', value_vars=['Total_Revenue_Old', 'Total_Revenue_New'],
-                         var_name='Revenue Type', value_name='Amount')
-    fig1 = px.bar(
-        melted,
-        x='Product_Family',
-        y='Amount',
-        color='Revenue Type',
-        barmode='group',
-        title='💸 Revenue Before vs After Price Revision',
-        labels={'Product_Family': 'Product Family', 'Amount': 'Revenue (AED)'}
+    import plotly.graph_objects as go
+
+    # Melt revenue values
+    melted = viz_df.melt(
+        id_vars='Product_Family',
+        value_vars=['Total_Revenue_Old', 'Total_Revenue_New'],
+        var_name='Revenue Type',
+        value_name='Amount'
     )
-    fig1.update_layout(xaxis_tickangle=-45)
+
+    # Create the figure
+    fig1 = go.Figure()
+
+    # Add grouped bar for revenue
+    for revenue_type in melted['Revenue Type'].unique():
+        data = melted[melted['Revenue Type'] == revenue_type]
+        fig1.add_trace(go.Bar(
+            x=data['Product_Family'],
+            y=data['Amount'],
+            name=revenue_type,
+            yaxis='y1'
+        ))
+
+    # Add line for Assigned Price Increase %
+    fig1.add_trace(go.Scatter(
+        x=viz_df['Product_Family'],
+        y=viz_df['Revenue_Increase_%'],
+        name='Assigned Price Increase %',
+        mode='lines+markers',
+        yaxis='y2',
+        line=dict(color='crimson', width=3, dash='dash')
+    ))
+
+    # Update layout for dual axis
+    fig1.update_layout(
+        title=' Revenue Before vs After Price Revision +  Assigned Price Increase %',
+        xaxis=dict(title='Product Family'),
+        yaxis=dict(
+            title='Revenue (AED)',
+            side='left'
+        ),
+        yaxis2=dict(
+            title='Assigned Price Increase (%)',
+            overlaying='y',
+            side='right',
+            showgrid=False
+        ),
+        barmode='group',
+        xaxis_tickangle=-45,
+        legend=dict(x=0.01, y=1.1, orientation='h'),
+        margin=dict(t=60)
+    )
+
+    # Display in Streamlit
     st.plotly_chart(fig1, use_container_width=True)
+
 
     # --------------------------------------------
     # 2️⃣ Gross Margin Impact (Bar)
@@ -611,8 +593,8 @@ if data_loaded:
 
     # ⬇️ Download CSV with all scoring logic
     csv_score_details = df[[
-        'SKU', 'Sales_Growth_%', 'GM%_Change', 'Elasticity', 'Cost_Change_%', 'GM_Abs_Change',
-        'Score_Sales_Growth', 'Score_GM_Change', 'Score_Elasticity',
+        'SKU', 'Sales_Growth_%', 'GM%_Change', 'Qty_Change_%','ASP_Change_%', 'Cost_Change_%', 'GM_Abs_Change',
+        'Score_Sales_Growth', 'Score_GM_Change', 'Score_Qty_Change','Score_ASP_Change',
         'Score_Cost_Change', 'Score_GM_Abs_Change', 'Total_Score',
         'Assigned_Price_Increase_%', 'Price_Today', 'New_Price', 'Revenue_1', 'New_Revenue'
     ]].round(2).to_csv(index=False)
