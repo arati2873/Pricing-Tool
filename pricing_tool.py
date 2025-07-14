@@ -232,6 +232,7 @@ if data_loaded:
     df['Qty_2'] = df['Qty_2'].fillna(0)
     df['ASP_1'] = df['ASP_1'].fillna(0)
     df['ASP_2'] = df['ASP_2'].fillna(0)
+    df['Sales_Growth_%'] = df['Sales_Growth_%'].fillna(0)
 
 
 
