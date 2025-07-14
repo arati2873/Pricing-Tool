@@ -243,24 +243,17 @@ if data_loaded:
     def scale_score(series): return MinMaxScaler(feature_range=(1, 15)).fit_transform(series.values.reshape(-1, 1)).flatten()
     def scale_score_inverse(series): return 16 - scale_score(series)
 
-    def scale_familywise(df, col, inverse=False):
-        scaled_series = pd.Series(index=df.index, dtype=float)
+    from sklearn.preprocessing import MinMaxScaler
 
-        for fam, group in df.groupby('Product_Family'):
-            idx = group.index
-            values = group[col].values.reshape(-1, 1)
-
-            if len(values) > 1:
-                scaler = MinMaxScaler(feature_range=(1, 15))
-                scaled_vals = scaler.fit_transform(values).flatten()
-                if inverse:
-                    scaled_vals = 16 - scaled_vals
-            else:
-                scaled_vals = np.array([8])  # Midpoint
-
-            scaled_series.loc[idx] = scaled_vals
-
-        return scaled_series
+    def scale_familywise(df, col):
+        scaled = []
+        for family in df['Product_Family'].unique():
+            subset = df[df['Product_Family'] == family]
+            values = pd.to_numeric(subset[col], errors='coerce').fillna(0).values.reshape(-1, 1)  # ⬅ Ensure numeric
+            scaler = MinMaxScaler()
+            scaled_vals = scaler.fit_transform(values).flatten()
+            scaled.extend(scaled_vals)
+        return pd.Series(scaled, index=df.index)
 
 
     df['Score_Sales_Growth'] = scale_familywise(df, 'Sales_Growth_%')
