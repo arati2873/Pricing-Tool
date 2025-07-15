@@ -282,7 +282,7 @@ if data_loaded:
         df['Score_Cost_Change'] = 0
         
     if 'Sales_Growth_%' in df.columns and df['Sales_Growth_%'].notna().any():
-        df['Score_Sales_Growth'] = scale_familywise(df, 'Sales_Growth_%', inverse=True)
+        df['Score_Sales_Growth'] = scale_familywise(df, 'Sales_Growth_%')
     else:
         df['Score_Sales_Growth'] = 0
     df['Score_GM_Change'] = scale_familywise(df, 'GM%_Change', inverse=True)
