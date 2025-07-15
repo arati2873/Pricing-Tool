@@ -255,29 +255,34 @@ if data_loaded:
     def scale_score_inverse(series): return 16 - scale_score(series)
 
     from sklearn.preprocessing import MinMaxScaler
+    import numpy as np
 
-    def scale_familywise(df, col, inverse=False):
-        result = pd.Series(index=df.index, dtype=float)
+    def scale_familywise(df, column, inverse=False):
+        df_result = df.copy()
+        df_result[f'Score_{column}'] = np.nan
 
-        for family in df['Product_Family'].dropna().unique():
-            subset = df[df['Product_Family'] == family]
-            values = pd.to_numeric(subset[col], errors='coerce').fillna(0).values.reshape(-1, 1)
+        for family in df_result['Product_Family'].unique():
+            mask = df_result['Product_Family'] == family
+            values = df_result.loc[mask, column].astype(float)
 
-            if len(values) == 0 or np.all(values == values[0]):
-                # All values are NaN or constant, assign 0 score
-                result.loc[subset.index] = 0
+            # Replace NaNs and infs with median of valid values
+            valid_values = values.replace([np.inf, -np.inf], np.nan)
+            median_val = valid_values.median()
+            filled_values = valid_values.fillna(median_val).values.reshape(-1, 1)
+
+            try:
+                scaler = MinMaxScaler()
+                scaled_vals = scaler.fit_transform(filled_values).flatten()
+
+                if inverse:
+                    scaled_vals = 1 - scaled_vals  # Invert the score
+
+                df_result.loc[mask, f'Score_{column}'] = scaled_vals
+            except Exception as e:
+                print(f"❌ Error scaling Product_Family '{family}': {e}")
                 continue
 
-            scaler = MinMaxScaler()
-            scaled_vals = scaler.fit_transform(values).flatten()
-
-            if inverse:
-                scaled_vals = 1 - scaled_vals
-
-            result.loc[subset.index] = scaled_vals
-
-        result = result.fillna(0)
-        return result
+        return df_result[f'Score_{column}']
 
 
 
