@@ -277,7 +277,7 @@ if data_loaded:
 
 
     if 'Cost_Change_%' in df.columns and df['Cost_Change_%'].notna().any():
-        df['Score_Cost_Change'] = scale_familywise(df, 'Cost_Change_%', inverse=True)
+        df['Score_Cost_Change'] = scale_familywise(df, 'Cost_Change_%')
     else:
         df['Score_Cost_Change'] = 0
         
