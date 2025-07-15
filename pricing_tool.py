@@ -282,14 +282,14 @@ if data_loaded:
         df['Score_Cost_Change'] = 0
         
     if 'Sales_Growth_%' in df.columns and df['Sales_Growth_%'].notna().any():
-        df['Score_Sales_Growth'] = scale_familywise(df, 'Sales_Growth_%',, inverse=True)
+        df['Score_Sales_Growth'] = scale_familywise(df, 'Sales_Growth_%', inverse=True)
     else:
         df['Score_Sales_Growth'] = 0
-    df['Score_GM_Change'] = scale_familywise(df, 'GM%_Change',, inverse=True)
+    df['Score_GM_Change'] = scale_familywise(df, 'GM%_Change', inverse=True)
     #df['Score_Elasticity'] = scale_familywise(df, 'Elasticity', inverse=True)
     df['Score_GM_Abs_Change'] = scale_familywise(df, 'GM_Abs_Change')
     df['Score_Qty_Change'] = scale_familywise(df, 'Qty_Change_%')
-    df['Score_ASP_Change'] = scale_familywise(df, 'ASP_Change_%',, inverse=True)
+    df['Score_ASP_Change'] = scale_familywise(df, 'ASP_Change_%', inverse=True)
 
 
     # 2. Use a visible checkbox toggle with label
