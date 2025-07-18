@@ -40,7 +40,6 @@ with st.expander("❓ How to Use This Tool (Click to Expand)"):
     2. **sales_data_1.csv** – Recent sales data (e.g., last 6 months or 1 year)
     3. **sales_data_2.csv** – Previous period sales (e.g., 6 months before `sales_data_1`)
     4. **standard_selling_price.csv** – Current prices by SKU
-    5. **monthly_sales.csv** – Monthly sales quantity and ASP by SKU
     6. **product_classification.csv** – Classification mapping (Family, Group, etc.)
 
     ➡️ Make sure **column headers are not changed** from the provided templates.
@@ -55,10 +54,20 @@ with st.expander("❓ How to Use This Tool (Click to Expand)"):
 
     ---
 
-    📂 You can [download sample input files here](https://github.com/arati2873/Pricing-Tool/tree/main/Sample%20data)
-
-    📄 Full user guide available in the [README](https://github.com/arati2873/Pricing-Tool/blob/main/README.md)
     """)
+    
+st.sidebar.markdown("## 📥 Resources")
+st.sidebar.markdown("Download the README and sample file to understand the format and how to use this tool.")
+
+import streamlit as st
+
+with open("Resources.zip", "rb") as f:
+    st.download_button(
+        label="📦 Download All Sample Inputs (ZIP)",
+        data=f,
+        file_name="Resources.zip",
+        mime="application/zip"
+    )
 
 
 
@@ -636,4 +645,4 @@ if data_loaded:
               'New_Price', 'Revenue_1', 'New_Revenue']].round(2).to_csv(index=False)
     st.download_button("📥 Download SKU-Level Price Plan", data=csv, file_name="price_revision_output.csv")
 else:
-    st.warning("⚠️ Please upload all six input files to start.")
+    st.warning("⚠️ Please upload all five input files to start.")
