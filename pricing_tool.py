@@ -56,8 +56,8 @@ with st.expander("❓ How to Use This Tool (Click to Expand)"):
 
     """)
     
-st.sidebar.markdown("## 📥 Resources")
-st.sidebar.markdown("Download the README and sample file to understand the format and how to use this tool.")
+#st.sidebar.markdown("## 📥 Resources")
+#st.sidebar.markdown("Download the README and sample file to understand the format and how to use this tool.")
 
 import streamlit as st
 
