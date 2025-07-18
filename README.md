@@ -37,7 +37,7 @@ Please make sure all 5 input files are placed in a single folder. The file names
 ────────────────────────────────────────
 
 1. Double-click the `PriceRevisionTool.exe` file.
-2. A window will open — enter the folder path where your 6 files are saved.
+2. upload all 5 files one by one, make sure all numeric and % columns are number formatted, for example 1,000 should be formatted as 1000 and 50% should be formatted aa 0.5.
 3. Set your preferred:
    - Global % Price Increase
    - Stock Months
