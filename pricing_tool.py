@@ -60,33 +60,23 @@ with st.expander("❓ How to Use This Tool (Click to Expand)"):
 #st.sidebar.markdown("Download the README and sample file to understand the format and how to use this tool.")
 
 
-import shutil
-import tempfile
+
 import streamlit as st
+import os
 
-RESOURCES_DIR = "resources"
+# Path to the ZIP file (relative to the script)
+zip_path = os.path.join(os.path.dirname(__file__), "Resources.zip")
 
-# Create a temp zip file
-tmp_dir = tempfile.gettempdir()
-zip_path = os.path.join(tmp_dir, "resources_bundle.zip")
-
-shutil.make_archive(zip_path.replace(".zip", ""), 'zip', RESOURCES_DIR)
-
-with open(zip_path, "rb") as zip_file:
-    st.download_button(
-        label="Download Resources Folder",
-        data=zip_file,
-        file_name="resources_bundle.zip",
-        mime="application/zip"
-    )
-
-#with open("Resources.zip", "rb") as f:
- #   st.download_button(
- #       label="📦 Download All Sample Inputs (ZIP)",
- #       data=f,
- #       file_name="Resources.zip",
- #       mime="application/zip"
- #   )
+if os.path.exists(zip_path):
+    with open(zip_path, "rb") as f:
+        st.download_button(
+            label="📦 Download All Sample Inputs (ZIP)",
+            data=f,
+            file_name="Resources.zip",
+            mime="application/zip"
+        )
+else:
+    st.error("ZIP file not found. Please check the file path.")
 
 
 
