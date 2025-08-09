@@ -61,7 +61,7 @@ with st.expander("❓ How to Use This Tool (Click to Expand)"):
 #st.sidebar.markdown("Download the README and sample file to understand the format and how to use this tool.")
 
 import streamlit as st
-url = "https://github.com/USERNAME/REPO/raw/main/Resources.zip"
+url = "https://raw.githubusercontent.com/arati2873/Pricing-Tool/main/Resources.zip"
 response = requests.get(url)
 #with open("Resources.zip", "rb") as f:
     st.download_button(
@@ -649,4 +649,5 @@ if data_loaded:
     st.download_button("📥 Download SKU-Level Price Plan", data=csv, file_name="price_revision_output.csv")
 else:
     st.warning("⚠️ Please upload all five input files to start.")
+
 
