@@ -64,15 +64,15 @@ import shutil
 import tempfile
 import streamlit as st
 
-# Paths
 RESOURCES_DIR = "resources"
-ZIP_PATH = "resources_bundle.zip"
 
-# Zip the folder (overwrite if exists)
-shutil.make_archive("resources_bundle", 'zip', RESOURCES_DIR)
+# Create a temp zip file
+tmp_dir = tempfile.gettempdir()
+zip_path = os.path.join(tmp_dir, "resources_bundle.zip")
 
-# Serve as download
-with open(ZIP_PATH, "rb") as zip_file:
+shutil.make_archive(zip_path.replace(".zip", ""), 'zip', RESOURCES_DIR)
+
+with open(zip_path, "rb") as zip_file:
     st.download_button(
         label="Download Resources Folder",
         data=zip_file,
