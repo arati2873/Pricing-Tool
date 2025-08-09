@@ -6,6 +6,7 @@ IS_PRO_VERSION = False  # Set to True for Pro version
     
 # --- Streamlit App: Price Revision Tool ---
 import streamlit as st
+import requests
 import pandas as pd
 import numpy as np
 import os
@@ -60,11 +61,13 @@ with st.expander("❓ How to Use This Tool (Click to Expand)"):
 #st.sidebar.markdown("Download the README and sample file to understand the format and how to use this tool.")
 
 import streamlit as st
-
-with open("Resources.zip", "rb") as f:
+url = "https://github.com/USERNAME/REPO/raw/main/Resources.zip"
+response = requests.get(url)
+#with open("Resources.zip", "rb") as f:
     st.download_button(
         label="📦 Download All Sample Inputs (ZIP)",
-        data=f,
+        data=response.content,
+        #data=f,
         file_name="Resources.zip",
         mime="application/zip"
     )
@@ -646,3 +649,4 @@ if data_loaded:
     st.download_button("📥 Download SKU-Level Price Plan", data=csv, file_name="price_revision_output.csv")
 else:
     st.warning("⚠️ Please upload all five input files to start.")
+
