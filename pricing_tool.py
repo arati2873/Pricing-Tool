@@ -64,7 +64,10 @@ import shutil
 import tempfile
 import streamlit as st
 
-RESOURCES_DIR = "Resources"
+# Paths
+RESOURCES_DIR = "resources"
+ZIP_PATH = "resources_bundle.zip"
+
 # Zip the folder (overwrite if exists)
 shutil.make_archive("resources_bundle", 'zip', RESOURCES_DIR)
 
@@ -662,4 +665,3 @@ if data_loaded:
     st.download_button("📥 Download SKU-Level Price Plan", data=csv, file_name="price_revision_output.csv")
 else:
     st.warning("⚠️ Please upload all five input files to start.")
-
