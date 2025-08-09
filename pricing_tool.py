@@ -60,17 +60,22 @@ with st.expander("❓ How to Use This Tool (Click to Expand)"):
 #st.sidebar.markdown("Download the README and sample file to understand the format and how to use this tool.")
 
 
-import requests
+import shutil
+import tempfile
 import streamlit as st
 
-url = "https://raw.githubusercontent.com/arati2873/Pricing-Tool/main/Resources.zip"
-response = requests.get(url)
-st.download_button(
-    label="Download Resources",
-    data=response.content,
-    file_name="Resources.zip",
-    mime="application/zip"
-)
+RESOURCES_DIR = "C:/Users/yadav/Price_Revision_Basic/Sample data/resources"
+# Zip the folder (overwrite if exists)
+shutil.make_archive("resources_bundle", 'zip', RESOURCES_DIR)
+
+# Serve as download
+with open(ZIP_PATH, "rb") as zip_file:
+    st.download_button(
+        label="Download Resources Folder",
+        data=zip_file,
+        file_name="resources_bundle.zip",
+        mime="application/zip"
+    )
 
 #with open("Resources.zip", "rb") as f:
  #   st.download_button(
