@@ -14,8 +14,10 @@ from sklearn.preprocessing import MinMaxScaler
 
 #Stage 5 Complete:Product Group and family level summary with override option
 # Set up page
+
+
 st.set_page_config(page_title="Price Revision Tool", layout="wide")
-st.title("📈 Intelligent Price Revision Tool")
+st.title("📈 Pricing Analytics")
 
 st.info("🔒 Your data is not stored or shared. Files are processed securely within your session for analysis only.")
 
@@ -30,6 +32,7 @@ with st.expander("🔐 Enter Access Code to Unlock the Tool"):
 if user_code != ACCESS_CODE:
     st.warning("This is a premium tool. Please enter a valid access code to continue.")
     st.stop()
+
 
 
 with st.expander("❓ How to Use This Tool (Click to Expand)"):
@@ -61,9 +64,15 @@ with st.expander("❓ How to Use This Tool (Click to Expand)"):
 
 
 
-import streamlit as st
-import os
+# --- MODE SELECTOR ---
+mode = st.sidebar.selectbox(
+    "Choose Analysis Mode",
+    ["Smart Pricing Revision", "Cost Increase Impact"]
+)
 
+
+def smart_pricing_revision():
+    st.subheader("🤖 Smart Pricing Revision")
 # Path to the ZIP file (relative to the script)
 zip_path = os.path.join(os.path.dirname(__file__), "Resources.zip")
 
@@ -79,16 +88,17 @@ else:
     st.error("ZIP file not found. Please check the file path.")
 
 
-
+def smart_pricing_revision():
+    st.subheader("🤖 Smart Pricing Revision")
 # Step 1: Upload files
-st.sidebar.markdown("### 📤 Upload Required Files")
+#st.sidebar.markdown("### 📤 Upload Required Files")
 
 uploaded_files = {
-    "Cost File": st.sidebar.file_uploader("Upload cost_file.csv", type="csv"),
-    "Sales Data 1": st.sidebar.file_uploader("Upload sales_data_1.csv", type="csv"),
-    "Sales Data 2": st.sidebar.file_uploader("Upload sales_data_2.csv", type="csv"),
-    "Price Today": st.sidebar.file_uploader("Upload standard_selling_price.csv", type="csv"),
-    "Product Classification": st.sidebar.file_uploader("Upload product_classification.csv", type="csv")
+    "Cost File": st.file_uploader("Upload cost_file.csv", type="csv"),
+    "Sales Data 1": st.file_uploader("Upload sales_data_1.csv", type="csv"),
+    "Sales Data 2": st.file_uploader("Upload sales_data_2.csv", type="csv"),
+    "Price Today": st.file_uploader("Upload standard_selling_price.csv", type="csv"),
+    "Product Classification": st.file_uploader("Upload product_classification.csv", type="csv")
 }
 
 if all(uploaded_files.values()):
@@ -655,3 +665,164 @@ if data_loaded:
     st.download_button("📥 Download SKU-Level Price Plan", data=csv, file_name="price_revision_output.csv")
 else:
     st.warning("⚠️ Please upload all five input files to start.")
+    
+    
+# -------------------------------
+# Cost Increase Impact Function
+# -------------------------------
+def cost_increase_impact():
+    st.header("💰 Cost Increase Impact Analysis")
+
+    # File uploads
+    sales_file = st.file_uploader("Upload Sales Data", type=["csv", "xlsx"])
+    cost_file = st.file_uploader("Upload Cost File", type=["csv", "xlsx"])
+
+    if sales_file and cost_file:
+        try:
+            # Load sales data
+            if sales_file.name.endswith(".csv"):
+                sales_data = pd.read_csv(sales_file)
+            else:
+                sales_data = pd.read_excel(sales_file)
+
+            # Load cost data
+            if cost_file.name.endswith(".csv"):
+                cost_data = pd.read_csv(cost_file)
+            else:
+                cost_data = pd.read_excel(cost_file)
+
+            # --- Validation ---
+            required_sales_cols = {"Product Family", "Product Group", "Revenue", "Cost"}
+            required_cost_cols = {"SKU", "Old Cost", "New Cost"}
+            if not required_sales_cols.issubset(sales_data.columns):
+                st.error(f"❌ Sales Data 1 must contain: {required_sales_cols}")
+                return
+            if not required_cost_cols.issubset(cost_data.columns):
+                st.error(f"❌ Cost File must contain: {required_cost_cols}")
+                return
+
+            # Merge sales and cost data on SKU
+            merged = pd.merge(sales_data, cost_data, on="SKU", how="inner")
+
+            # Calculate % cost increase
+            merged["% Cost Increase"] = ((merged["New Cost"] - merged["Old Cost"]) / merged["Old Cost"]) * 100
+
+            # Revenue and cost impacts
+            merged["Revenue Impact"] = (merged["% Cost Increase"] / 100) * merged["Revenue"]
+            merged["Cost Increase Impact"] = (merged["% Cost Increase"] / 100) * merged["Cost"]
+
+            # --- Family level summary ---
+            fam_summary = merged.groupby("Product Family").agg({
+                "Revenue": "sum",
+                "Cost": "sum",
+                "Revenue Impact": "sum",
+                "Cost Increase Impact": "sum"
+            }).reset_index()
+
+            # Add totals
+            fam_total = fam_summary[["Revenue", "Cost", "Revenue Impact", "Cost Increase Impact"]].sum().to_frame().T
+            fam_total.insert(0, "Product Family", "TOTAL")
+            fam_summary = pd.concat([fam_summary, fam_total], ignore_index=True)
+
+            # Weightage calculations
+            fam_summary["Revenue Impact %"] = ((fam_summary["Revenue Impact"] / fam_summary["Revenue"]) * 100).round(2)
+            fam_summary["Cost Impact %"] = ((fam_summary["Cost Increase Impact"] / fam_summary["Cost"]) * 100).round(2)
+
+            st.subheader("📊 Product Family Level Summary")
+            st.dataframe(fam_summary.style.format({
+                "Revenue": "{:,.0f}",
+                "Cost": "{:,.0f}",
+                "Revenue Impact": "{:,.0f}",
+                "Cost Increase Impact": "{:,.0f}",
+                "Revenue Impact %": "{:.2f}%",
+                "Cost Impact %": "{:.2f}%"
+            }))
+
+            # --- Group level summary ---
+            grp_summary = merged.groupby("Product Group").agg({
+                "Revenue": "sum",
+                "Cost": "sum",
+                "Revenue Impact": "sum",
+                "Cost Increase Impact": "sum"
+            }).reset_index()
+
+            # Add totals
+            grp_total = grp_summary[["Revenue", "Cost", "Revenue Impact", "Cost Increase Impact"]].sum().to_frame().T
+            grp_total.insert(0, "Product Group", "TOTAL")
+            grp_summary = pd.concat([grp_summary, grp_total], ignore_index=True)
+
+            # Weightage calculations
+            grp_summary["Revenue Impact %"] = ((grp_summary["Revenue Impact"] / grp_summary["Revenue"]) * 100).round(2)
+            grp_summary["Cost Impact %"] = ((grp_summary["Cost Increase Impact"] / grp_summary["Cost"]) * 100).round(2)
+
+            st.subheader("📊 Product Group Level Summary")
+            st.dataframe(grp_summary.style.format({
+                "Revenue": "{:,.0f}",
+                "Cost": "{:,.0f}",
+                "Revenue Impact": "{:,.0f}",
+                "Cost Increase Impact": "{:,.0f}",
+                "Revenue Impact %": "{:.2f}%",
+                "Cost Impact %": "{:.2f}%"
+            }))
+
+            # --- Visualization ---
+            #st.subheader("📈 Cost Increase Distribution")
+            #fig = px.histogram(merged, x="% Cost Increase", nbins=20, title="Distribution of % Cost Increase")
+            #st.plotly_chart(fig, use_container_width=True)
+            
+            st.subheader("📈 Cost Increase Distribution")
+
+            
+            import plotly.express as px
+            import plotly.graph_objects as go
+           
+            
+
+            # --- Hierarchy selection ---
+            families = merged["Product Family"].unique().tolist()
+            selected_family = st.selectbox("Select Product Family", ["All"] + families)
+
+            if selected_family != "All":
+                groups = merged[merged["Product Family"] == selected_family]["Product Group"].unique().tolist()
+                selected_group = st.selectbox("Select Product Group", ["All"] + groups)
+                if selected_group != "All":
+                    df_filtered = merged[(merged["Product Family"] == selected_family) &
+                                         (merged["Product Group"] == selected_group)]
+                else:
+                    df_filtered = merged[merged["Product Family"] == selected_family]
+            else:
+                df_filtered = merged.copy()
+
+            # --- Scatter Plot ---
+            st.write("### Scatter Plot: Cost Increase by SKU")
+            fig_scatter = px.scatter(
+                df_filtered,
+                x="SKU",
+                y="Cost_Change_%",
+                size="QTY",
+                color="Cost_Change_%",
+                color_continuous_scale="Reds",
+                hover_data=["Product Family", "Product Group", "Old Cost", "New Cost", "GM%_1"]
+            )
+            fig_scatter.update_layout(
+                xaxis_title="SKU",
+                yaxis_title="Cost_Change_%",
+                coloraxis_colorbar=dict(title="% Increase")
+            )
+            st.plotly_chart(fig_scatter, use_container_width=True)
+
+            # --- Waterfall Chart: Margin Walk ---
+
+
+
+
+        except Exception as e:
+            st.error(f"⚠️ Error processing files: {e}")
+
+# -------------------------------
+# Run the selected module
+# -------------------------------
+if mode == "Smart Pricing Revision":
+    smart_pricing_revision()
+elif mode == "Cost Increase Impact":
+    cost_increase_impact()
