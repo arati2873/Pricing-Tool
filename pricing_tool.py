@@ -176,8 +176,8 @@ def clean_numeric_column(df, col):
 
 if data_loaded:
     cost_df = clean_column_names(pd.read_csv(file_paths["Cost File"]))
-    sales_1 = clean_column_names(pd.read_csv(file_paths["Sales Data 1"]))
-    sales_2 = clean_column_names(pd.read_csv(file_paths["Sales Data 2"]))
+    sales_1 = clean_column_names(pd.read_csv(file_paths["Sales YTD"]))
+    sales_2 = clean_column_names(pd.read_csv(file_paths["Sales YTD-1"]))
     price_today = clean_column_names(pd.read_csv(file_paths["Price Today"]))
     product_class = clean_column_names(pd.read_csv(file_paths["Product Classification"]))
 
