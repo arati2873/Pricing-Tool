@@ -1,6 +1,6 @@
  
 # Define SKU limits
-BASIC_SKU_LIMIT = 300000
+BASIC_SKU_LIMIT = 3000000
 IS_PRO_VERSION = False  # Set to True for Pro version
 
     
@@ -37,8 +37,8 @@ with st.expander("❓ How to Use This Tool (Click to Expand)"):
     ### 📘 Required Inputs
     This tool requires 6 CSV files:
     1. **cost_file.csv** – Cost data by SKU
-    2. **sales_data_1.csv** – Recent sales data (e.g., last 6 months or 1 year)
-    3. **sales_data_2.csv** – Previous period sales (e.g., 6 months before `sales_data_1`)
+    2. **sales_ytd.csv** – Recent sales data (e.g., last 6 months or 1 year)
+    3. **sales_ytd-1.csv** – Previous period sales (e.g., 6 months before `sales_ytd`)
     4. **standard_selling_price.csv** – Current prices by SKU
     5. **monthly_sales.csv** – Monthly sales quantity and ASP by SKU
     6. **product_classification.csv** – Classification mapping (Family, Group, etc.)
@@ -67,8 +67,8 @@ st.sidebar.markdown("### 📤 Upload Required Files")
 
 uploaded_files = {
     "Cost File": st.sidebar.file_uploader("Upload cost_file.csv", type="csv"),
-    "Sales Data 1": st.sidebar.file_uploader("Upload sales_data_1.csv", type="csv"),
-    "Sales Data 2": st.sidebar.file_uploader("Upload sales_data_2.csv", type="csv"),
+    "Sales YTD": st.sidebar.file_uploader("Upload sales_ytd.csv", type="csv"),
+    "Sales YTD-1": st.sidebar.file_uploader("Upload sales_ytd-1.csv", type="csv"),
     "Price Today": st.sidebar.file_uploader("Upload standard_selling_price.csv", type="csv"),
     "Product Classification": st.sidebar.file_uploader("Upload product_classification.csv", type="csv")
 }
