@@ -371,7 +371,29 @@ if data_loaded:
     
     #df['Total_Score'] = scale_familywise(df, 'Total_Score')
 
+    # Ensure numeric columns
+    numeric_cols = ['Revenue_1', 'Price_Today', 'TTL_Cost']
+    for col in numeric_cols:
+        df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
 
+    # Mask for all SKUs (no overrides yet)
+    all_skus_mask = df['SKU'].notna()
+    # Step 1: Make sure scores are non-negative
+    df['Total_Score'] = df['Total_Score'].clip(lower=0)
+    
+    # Step 2: Compute proportional increases based on score
+    scores = df.loc[all_skus_mask, 'Total_Score']
+    if scores.sum() == 0:
+        # If all scores are zero, apply equal global increase
+        df.loc[all_skus_mask, 'Assigned_Price_Increase_%'] = global_target
+    else:
+        # Proportional allocation: scale scores so that weighted average = global_target
+        normalized = scores / scores.sum()
+        df.loc[all_skus_mask, 'Assigned_Price_Increase_%'] = normalized * global_target * len(normalized)
+
+    # Optional: Clamp extreme increases to reasonable range (0-2x global target)
+    df['Assigned_Price_Increase_%'] = df['Assigned_Price_Increase_%'].clip(lower=0, upper=global_target*2)
+    
     st.sidebar.markdown("---")
     global_target = st.sidebar.slider("Global % Price Increase Target", 0.5, 10.0, 3.0, step=0.1)
     
@@ -406,23 +428,16 @@ if data_loaded:
 
     df['Estimated_Qty'] = df['Revenue_1'] / df['ASP_1']
     df['New_Price'] = df['Price_Today'] * (1 + df['Assigned_Price_Increase_%'] / 100)
-    df['New_Revenue'] = df['Revenue_1'] * (1 + df['Assigned_Price_Increase_%'] / 100)
+    df['New_Revenue'] = df['Revenue_1'] * (df['New_Price'] / df['Price_Today'])
+    #df['New_Revenue'] = df['Revenue_1'] * (1 + df['Assigned_Price_Increase_%'] / 100)
 
     #df['TTL_Cost'] = df['Revenue_1'] * (1 - df['GM%_1'] / 100)
     # Clean and convert relevant columns to numeric
-    df['TTL_Cost'] = pd.to_numeric(df['TTL_Cost'], errors='coerce')
-    df['Cost_Change_%'] = pd.to_numeric(df['Cost_Change_%'], errors='coerce')
-
-    # Now safely perform the calculation
+    df['TTL_Cost'] = pd.to_numeric(df['TTL_Cost'], errors='coerce').fillna(0)
+    df['Cost_Change_%'] = pd.to_numeric(df['Cost_Change_%'], errors='coerce').fillna(0)
+    impact_fraction = (total_months - stock_months) / total_months
     df['Theoretical_New_Cost'] = df['TTL_Cost'] * (1 + df['Cost_Change_%'] / 100)
-
-    # Optional: Fill NaNs if any
-    df['Theoretical_New_Cost'] = df['Theoretical_New_Cost'].fillna(0)
-
     df['New_Cost'] = df['TTL_Cost'] + (df['Theoretical_New_Cost'] - df['TTL_Cost']) * impact_fraction
-    #df.drop(columns=['Theoretical_New_Cost'], inplace=True)
-
-
 
     total_old_revenue = df['Revenue_1'].sum()
     target_total_revenue = total_old_revenue * (1 + global_target / 100)
