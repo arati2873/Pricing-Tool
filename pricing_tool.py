@@ -388,8 +388,9 @@ if data_loaded:
         df.loc[all_skus_mask, 'Assigned_Price_Increase_%'] = global_target
     else:
         # Proportional allocation: scale scores so that weighted average = global_target
-        normalized = scores / scores.sum()
-        df.loc[all_skus_mask, 'Assigned_Price_Increase_%'] = normalized * global_target * len(normalized)
+        #normalized = scores / scores.sum()
+        normalised = df.loc[all_skus_mask, 'Total_Score'] / df.loc[all_skus_mask, 'Total_Score'].sum()
+        df.loc[all_skus_mask, 'Assigned_Price_Increase_%'] = normalized * global_target * 100
 
     # Optional: Clamp extreme increases to reasonable range (0-2x global target)
     df['Assigned_Price_Increase_%'] = df['Assigned_Price_Increase_%'].clip(lower=0, upper=global_target*2)
