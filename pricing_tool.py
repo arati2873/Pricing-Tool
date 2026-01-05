@@ -385,8 +385,8 @@ if data_loaded:
     #scores = df.loc[all_skus_mask, 'Total_Score']
     if all_skus_mask.sum() > 0:
     # Normalize Total_Score to sum to 1
-    normalized = df.loc[all_skus_mask, 'Total_Score']
-    total_score_sum = normalized.sum()
+        normalized = df.loc[all_skus_mask, 'Total_Score']
+        total_score_sum = normalized.sum()
     if total_score_sum > 0:
         normalized = normalized / total_score_sum
     else:
