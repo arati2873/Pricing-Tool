@@ -257,7 +257,7 @@ if data_loaded:
     from sklearn.preprocessing import MinMaxScaler
     import numpy as np
 
-     def scale_familywise(df, col, inverse=False):
+    def scale_familywise(df, col, inverse=False):
         scaled_series = pd.Series(index=df.index, dtype=float)
         for fam, group in df.groupby('Product_Family'):
             idx = group.index
