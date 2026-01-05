@@ -360,7 +360,7 @@ if data_loaded:
         df['Score_GM_Abs_Change'] * weights['GM_Abs_Change'] +
         df['Score_Qty_Change'] * weights['Qty_Change'] +
         df['Score_ASP_Change'] * weights['ASP_Change']
-    )/100
+    )
     
     #df['Total_Score'] = scale_familywise(df, 'Total_Score')
 
