@@ -354,13 +354,13 @@ if data_loaded:
 
     # 3. Now compute Total_Score using normalized_weights
     df['Total_Score'] = (
-        df['Score_Sales_Growth'] * normalized_weights['Sales_Growth'] +
-        df['Score_Cost_Change'] * normalized_weights['Cost_Change'] +
-        df['Score_GM_Change'] * normalized_weights['GM%_Change'] +
-        df['Score_GM_Abs_Change'] * normalized_weights['GM_Abs_Change'] +
-        df['Score_Qty_Change'] * normalized_weights['Qty_Change'] +
-        df['Score_ASP_Change'] * normalized_weights['ASP_Change']
-    )
+        df['Score_Sales_Growth'] * weights['Sales_Growth'] +
+        df['Score_Cost_Change'] * weights['Cost_Change'] +
+        df['Score_GM_Change'] * weights['GM%_Change'] +
+        df['Score_GM_Abs_Change'] * weights['GM_Abs_Change'] +
+        df['Score_Qty_Change'] * weights['Qty_Change'] +
+        df['Score_ASP_Change'] * weights['ASP_Change']
+    )/10
     
     #df['Total_Score'] = scale_familywise(df, 'Total_Score')
 
