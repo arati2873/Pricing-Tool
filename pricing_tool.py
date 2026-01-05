@@ -627,7 +627,9 @@ if data_loaded:
 
     # ⬇️ Download CSV with all scoring logic
     csv_score_details = df[[
-        'SKU', 'Sales_Growth_%', 'GM%_Change', 'Qty_Change_%','ASP_Change_%', 'Cost_Change_%', 'GM_Abs_Change',
+        'SKU', 'Revenue_1','GM_1','Cost_Per_Unit_1','ASP_1','GM%_1','TTL_Cost','Qty_1',
+        'Revenue_2','GM_2','Cost_Per_Unit_2','ASP_2','GM%_2','Qty_2',
+        'Sales_Growth_%', 'GM%_Change', 'Qty_Change_%','ASP_Change_%', 'Cost_Change_%', 'GM_Abs_Change',
         'Score_Sales_Growth', 'Score_GM_Change', 'Score_Qty_Change','Score_ASP_Change',
         'Score_Cost_Change', 'Score_GM_Abs_Change', 'Total_Score',
         'Assigned_Price_Increase_%', 'Price_Today', 'New_Price', 'Revenue_1', 'New_Revenue'
