@@ -257,38 +257,22 @@ if data_loaded:
     from sklearn.preprocessing import MinMaxScaler
     import numpy as np
 
-    def scale_familywise(df, column, inverse=False):
-        df_result = df.copy()
-        df_result[f'Score_{column}'] = np.nan
-
-        for family in df_result['Product_Family'].unique():
-            mask = df_result['Product_Family'] == family
-            values = df_result.loc[mask, column].astype(float)
-
-            # Replace NaNs and infs with median of valid values
-            valid_values = values.replace([np.inf, -np.inf], np.nan)
-            median_val = valid_values.median()
-            filled_values = valid_values.fillna(median_val).values.reshape(-1, 1)
-            
-            if filled_values.max() == filled_values.min():
-                df_result.loc[mask, f'Score_{column}'] = 8  # neutral score
-                continue
-
-
-            try:
+     def scale_familywise(df, col, inverse=False):
+        scaled_series = pd.Series(index=df.index, dtype=float)
+        for fam, group in df.groupby('Product_Family'):
+            idx = group.index
+            values = group[col].values.reshape(-1, 1)
+            if len(values) > 1:
                 scaler = MinMaxScaler(feature_range=(1, 15))
-                scaled_vals = scaler.fit_transform(filled_values).flatten()
-
+                scaled_vals = scaler.fit_transform(values).flatten()
                 if inverse:
-                    scaled_vals = 16 - scaled_vals  # Invert the score
-
-                df_result.loc[mask, f'Score_{column}'] = scaled_vals
-            except Exception as e:
-                print(f"❌ Error scaling Product_Family '{family}': {e}")
-                continue
-
-        return df_result[f'Score_{column}']
-
+                    scaled_vals = 16 - scaled_vals
+            else:
+                scaled_vals = np.array([8.0])  # Midpoint for single-item families
+            scaled_series.loc[idx] = scaled_vals
+        # If any remaining NaNs (e.g. missing Product_Family), fill with midpoint
+        scaled_series = scaled_series.fillna(8.0)
+        return scaled_series
 
 
     if 'Cost_Change_%' in df.columns and df['Cost_Change_%'].notna().any():
