@@ -1,6 +1,6 @@
  
 # Define SKU limits
-BASIC_SKU_LIMIT = 3000000
+BASIC_SKU_LIMIT = 300000
 IS_PRO_VERSION = False  # Set to True for Pro version
 
     
@@ -37,10 +37,9 @@ with st.expander("❓ How to Use This Tool (Click to Expand)"):
     ### 📘 Required Inputs
     This tool requires 6 CSV files:
     1. **cost_file.csv** – Cost data by SKU
-    2. **sales_ytd.csv** – Recent sales data (e.g., last 6 months or 1 year)
-    3. **sales_ytd-1.csv** – Previous period sales (e.g., 6 months before `sales_ytd`)
+    2. **sales_data_1.csv** – Recent sales data (e.g., last 6 months or 1 year)
+    3. **sales_data_2.csv** – Previous period sales (e.g., 6 months before `sales_data_1`)
     4. **standard_selling_price.csv** – Current prices by SKU
-    5. **monthly_sales.csv** – Monthly sales quantity and ASP by SKU
     6. **product_classification.csv** – Classification mapping (Family, Group, etc.)
 
     ➡️ Make sure **column headers are not changed** from the provided templates.
@@ -55,10 +54,29 @@ with st.expander("❓ How to Use This Tool (Click to Expand)"):
 
     ---
 
-    📂 You can [download sample input files here](https://github.com/arati2873/Pricing-Tool/tree/main/Sample%20data)
-
-    📄 Full user guide available in the [README](https://github.com/arati2873/Pricing-Tool/blob/main/README.md)
     """)
+    
+#st.sidebar.markdown("## 📥 Resources")
+#st.sidebar.markdown("Download the README and sample file to understand the format and how to use this tool.")
+
+
+
+import streamlit as st
+import os
+
+# Path to the ZIP file (relative to the script)
+zip_path = os.path.join(os.path.dirname(__file__), "Resources.zip")
+
+if os.path.exists(zip_path):
+    with open(zip_path, "rb") as f:
+        st.download_button(
+            label="📦 Download All Sample Inputs (ZIP)",
+            data=f,
+            file_name="Resources.zip",
+            mime="application/zip"
+        )
+else:
+    st.error("ZIP file not found. Please check the file path.")
 
 
 
@@ -67,8 +85,8 @@ st.sidebar.markdown("### 📤 Upload Required Files")
 
 uploaded_files = {
     "Cost File": st.sidebar.file_uploader("Upload cost_file.csv", type="csv"),
-    "Sales YTD": st.sidebar.file_uploader("Upload sales_ytd.csv", type="csv"),
-    "Sales YTD-1": st.sidebar.file_uploader("Upload sales_ytd-1.csv", type="csv"),
+    "Sales Data 1": st.sidebar.file_uploader("Upload sales_data_1.csv", type="csv"),
+    "Sales Data 2": st.sidebar.file_uploader("Upload sales_data_2.csv", type="csv"),
     "Price Today": st.sidebar.file_uploader("Upload standard_selling_price.csv", type="csv"),
     "Product Classification": st.sidebar.file_uploader("Upload product_classification.csv", type="csv")
 }
@@ -176,8 +194,8 @@ def clean_numeric_column(df, col):
 
 if data_loaded:
     cost_df = clean_column_names(pd.read_csv(file_paths["Cost File"]))
-    sales_1 = clean_column_names(pd.read_csv(file_paths["Sales YTD"]))
-    sales_2 = clean_column_names(pd.read_csv(file_paths["Sales YTD-1"]))
+    sales_1 = clean_column_names(pd.read_csv(file_paths["Sales Data 1"]))
+    sales_2 = clean_column_names(pd.read_csv(file_paths["Sales Data 2"]))
     price_today = clean_column_names(pd.read_csv(file_paths["Price Today"]))
     product_class = clean_column_names(pd.read_csv(file_paths["Product Classification"]))
 
@@ -636,5 +654,4 @@ if data_loaded:
               'New_Price', 'Revenue_1', 'New_Revenue']].round(2).to_csv(index=False)
     st.download_button("📥 Download SKU-Level Price Plan", data=csv, file_name="price_revision_output.csv")
 else:
-    st.warning("⚠️ Please upload all six input files to start.")
-
+    st.warning("⚠️ Please upload all five input files to start.")
