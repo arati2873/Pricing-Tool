@@ -197,7 +197,17 @@ if data_loaded:
      #   df = clean_numeric_column(df, col)
 
     # ✅ Calculations
-    df['Sales_Growth_%'] = ((df['Revenue_1'] - df['Revenue_2']) / df['Revenue_2']) * 100
+    df['Sales_Growth_%'] = (
+    (df['Revenue_1'] - df['Revenue_2']) /
+    df['Revenue_2'].replace(0, np.nan)
+    ) * 100
+
+    df['Sales_Growth_%'] = (
+        df['Sales_Growth_%']
+        .replace([np.inf, -np.inf], np.nan)
+        .fillna(0)
+    )
+
     df['GM%_Change'] = df['GM%_1'] - df['GM%_2']
     df['Price_Change_%'] = ((df['ASP_1'] - df['ASP_2']) / df['ASP_2']) * 100
     df['GM_Abs_Change'] = df['GM_1'] - df['GM_2']
@@ -216,12 +226,12 @@ if data_loaded:
 
 
 
-    df['Revenue_1'] = df['Revenue_1'].fillna(0)
-    df['Revenue_2'] = df['Revenue_2'].fillna(0)
+    #df['Revenue_1'] = df['Revenue_1'].fillna(0)
+    #df['Revenue_2'] = df['Revenue_2'].fillna(0)
     df['ASP_1'] = df['ASP_1'].replace(0, np.nan)
     df['ASP_2'] = df['ASP_2'].replace(0, np.nan)
-    df['GM%_1'] = df['GM%_1'].fillna(0)
-    df['GM%_2'] = df['GM%_2'].fillna(0)
+    #df['GM%_1'] = df['GM%_1'].fillna(0)
+    #df['GM%_2'] = df['GM%_2'].fillna(0)
     df['GM_1'] = df['GM_1'].fillna(0)
     df['GM_2'] = df['GM_2'].fillna(0)
     df['Cost_Change_%'] = df['Cost_Change_%'].fillna(0)
