@@ -113,14 +113,27 @@ def apply_override(df, key_col, selected_keys, pct_dict, score_col, price_col, r
         st.error(f"❌ You've exceeded the 30,000 SKU limit. Please upgrade to the Pro version.")
         st.stop()
 
-def apply_global_score_increase(df, excluded_mask, score_col, target_pct):
-    sub_df = df[excluded_mask]
-    if sub_df[score_col].sum() == 0:
-        df.loc[excluded_mask, 'Assigned_Price_Increase_%'] = target_pct
+def apply_global_score_increase_safe(df, mask, score_col, target_pct):
+    sub_df = df[mask]
+    if sub_df.empty:
+        return df
+
+    # Step 1: Ensure scores are non-negative
+    scores = sub_df[score_col].clip(lower=0)
+
+    # Step 2: Normalize scores to sum to 1
+    if scores.sum() > 0:
+        normalized_weight = scores / scores.sum()
     else:
-        weight = sub_df[score_col]
-        multiplier = target_pct / weight.mean()
-        df.loc[excluded_mask, 'Assigned_Price_Increase_%'] = weight * multiplier
+        # If all scores are zero, assign equal weight
+        normalized_weight = pd.Series(1 / len(scores), index=sub_df.index)
+
+    # Step 3: Calculate assigned % increase proportional to score
+    df.loc[mask, 'Assigned_Price_Increase_%'] = normalized_weight * target_pct * len(scores)
+
+    # Step 4: Safety clamp to prevent negative or huge increases
+    df['Assigned_Price_Increase_%'] = df['Assigned_Price_Increase_%'].clip(lower=0, upper=target_pct*2)
+
     return df
 
 def adjust_remaining(df, overridden_mask, target_total_revenue):
@@ -388,7 +401,7 @@ if data_loaded:
 
     # 3. Apply Global Increase to remaining SKUs
     non_overridden_mask = df['Assigned_Price_Increase_%'].isna()
-    df = apply_global_score_increase(df, non_overridden_mask, 'Score_Normalized', global_target)
+    df = apply_global_score_increase_safe(df, non_overridden_mask, 'Score_Normalized', global_target)
 
 
     df['Estimated_Qty'] = df['Revenue_1'] / df['ASP_1']
