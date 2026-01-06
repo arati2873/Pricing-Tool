@@ -197,14 +197,14 @@ if data_loaded:
      #   df = clean_numeric_column(df, col)
 
     # ✅ Calculations
-   import numpy as np
+import numpy as np
 
-    def safe_growth_pct(new, old):
-        return np.where(
-            old == 0,
-            np.where(new > 0, 100.0, 0.0),
-            ((new - old) / old) * 100
-        )
+def safe_growth_pct(new, old):
+    return np.where(
+        old == 0,
+        np.where(new > 0, 100.0, 0.0),
+        ((new - old) / old) * 100
+    )
     
     df['Revenue_Growth_%'] = safe_growth_pct(
     df['Revenue_1'],
