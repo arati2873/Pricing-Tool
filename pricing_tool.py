@@ -421,12 +421,16 @@ if data_loaded:
     # -------------------------------------------------
     df['Assigned_Price_Increase_%'] = (
         df['Assigned_Price_Increase_%']
-        .clip(lower=0, upper=global_target * 2)
+        .clip(lower=0, upper=float(global_target) * 2)
     )
 
     
     st.sidebar.markdown("---")
     global_target = st.sidebar.slider("Global % Price Increase Target", 0.5, 10.0, 3.0, step=0.1)
+    global_target = pd.to_numeric(global_target, errors='coerce')
+
+    if pd.isna(global_target):
+        global_target = 0
     
     st.sidebar.markdown("### Inventory & Sales Coverage")
 
