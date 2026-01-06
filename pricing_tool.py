@@ -231,10 +231,7 @@ def safe_growth_pct(new, old):
     df['ASP_2']
     )
     
-    df['GM%_Change'] = np.where(
-    df['GM%_2'] == 0,
-    np.where(df['GM%_1'] > 0, 100.0, 0.0),
-    (df['GM%_1'] - df['GM%_2']))
+    df['GM%_Change'] = df['GM%_1'] - df['GM%_2']
     
 
 
