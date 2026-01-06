@@ -197,21 +197,30 @@ if data_loaded:
      #   df = clean_numeric_column(df, col)
 
     # ✅ Calculations
-import numpy as np
+    df['Sales_Growth_%'] = (
+        (df['Revenue_1'] - df['Revenue_2']) /
+        df['Revenue_2'].replace(0, np.nan)) * 100
 
-def safe_growth_pct(new, old):
-    return np.where(
-        old == 0,
-        np.where(new > 0, 100.0, 0.0),
-        ((new - old) / old) * 100)
-
-    df['Revenue_Growth_%'] = safe_growth_pct(df['Revenue_1'], df['Revenue_2'])
-    df['Price_Change_%'] = safe_growth_pct(df['ASP_1'], df['ASP_2'])
-    df['GM_Abs_Change'] = safe_growth_pct(df['GM_1'], df['GM_2'])
-    df['Qty_Change_%'] = safe_growth_pct(df['Qty_1'], df['Qty_2'])
-    df['ASP_Change_%'] = safe_growth_pct(df['ASP_1'], df['ASP_2'])
+    df['Sales_Growth_%'] = (
+        df['Sales_Growth_%']
+        .replace([np.inf, -np.inf], np.nan)
+        .fillna(0))
 
     df['GM%_Change'] = df['GM%_1'] - df['GM%_2']
+    df['Price_Change_%'] = ((df['ASP_1'] - df['ASP_2']) / df['ASP_2']) * 100
+    df['GM_Abs_Change'] = df['GM_1'] - df['GM_2']
+    # Calculate % change in Qty and ASP
+    
+    df['Qty_1'] = pd.to_numeric(df['Qty_1'], errors='coerce')
+    df['Qty_2'] = pd.to_numeric(df['Qty_2'], errors='coerce')
+
+    
+    df['Qty_Change_%'] = ((df['Qty_1'] - df['  ']) / df['Qty_2'].replace(0, np.nan)) * 100
+    df['ASP_Change_%'] = ((df['ASP_1'] - df['ASP_2']) / df['ASP_2'].replace(0, np.nan)) * 100
+
+    # Handle NaNs or inf values
+    df['Qty_Change_%'] = df['Qty_Change_%'].replace([np.inf, -np.inf], 0).fillna(0)
+    df['ASP_Change_%'] = df['ASP_Change_%'].replace([np.inf, -np.inf], 0).fillna(0)
     
     
 
@@ -641,5 +650,5 @@ def safe_growth_pct(new, old):
     csv = df[['SKU', 'Product_Family', 'Price_Today', 'Assigned_Price_Increase_%',
               'New_Price', 'Revenue_1', 'New_Revenue']].round(2).to_csv(index=False)
     st.download_button("📥 Download SKU-Level Price Plan", data=csv, file_name="price_revision_output.csv")
-#else:
-#    st.warning("⚠️ Please upload all six input files to start.")
+else:
+    st.warning("⚠️ Please upload all six input files to start.")
