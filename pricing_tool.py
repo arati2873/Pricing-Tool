@@ -371,32 +371,59 @@ if data_loaded:
     
     #df['Total_Score'] = scale_familywise(df, 'Total_Score')
 
+    # -------------------------------------------------
     # Ensure numeric columns
+    # -------------------------------------------------
     numeric_cols = ['Revenue_1', 'Price_Today', 'TTL_Cost']
     for col in numeric_cols:
         df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
 
-    # Mask for all SKUs (no overrides yet)
+    # -------------------------------------------------
+    # Initialize Assigned Price Increase
+    # -------------------------------------------------
     df['Assigned_Price_Increase_%'] = np.nan
-    all_skus_mask = df['Assigned_Price_Increase_%'].isna() & df['SKU'].notna()
-    # Step 1: Make sure scores are non-negative
-    df['Total_Score'] = df['Total_Score'].clip(lower=0)
-    
-    # Step 2: Compute proportional increases based on score
-    #scores = df.loc[all_skus_mask, 'Total_Score']
-    if all_skus_mask.sum() > 0:
-    # Normalize Total_Score to sum to 1
-        normalized = df.loc[all_skus_mask, 'Total_Score']
-        total_score_sum = normalized.sum()
-    if total_score_sum > 0:
-        normalized = normalized / total_score_sum
-    else:
-        normalized = pd.Series(1 / all_skus_mask.sum(), index=df.loc[all_skus_mask].index)  # equal allocation if scores are zero
 
-    # Assign Assigned_Price_Increase_% based on normalized score and global target
-    df.loc[normalized.index, 'Assigned_Price_Increase_%'] = (normalized.values * global_target)
-    # Optional: Clamp extreme increases to reasonable range (0-2x global target)
-    df['Assigned_Price_Increase_%'] = df['Assigned_Price_Increase_%'].clip(lower=0, upper=global_target*2)
+    # Mask for all valid SKUs (no overrides yet)
+    all_skus_mask = df['SKU'].notna()
+
+    # -------------------------------------------------
+    # Score cleanup
+    # -------------------------------------------------
+    df['Total_Score'] = (
+        pd.to_numeric(df['Total_Score'], errors='coerce')
+        .fillna(0)
+        .clip(lower=0)
+    )
+
+    # -------------------------------------------------
+    # Compute proportional price increases
+    # -------------------------------------------------
+    if all_skus_mask.sum() > 0:
+        scores = df.loc[all_skus_mask, 'Total_Score']
+        total_score_sum = scores.sum()
+
+        if total_score_sum > 0:
+            normalized = scores / total_score_sum
+        else:
+            # Fallback: equal allocation if all scores are zero
+            normalized = pd.Series(
+                1 / len(scores),
+                index=scores.index
+            )
+
+        # ✅ Index-safe assignment
+            df.loc[normalized.index, 'Assigned_Price_Increase_%'] = (
+        normalized.values * global_target
+    )
+
+    # -------------------------------------------------
+    # Clamp to avoid extreme values
+    # -------------------------------------------------
+    df['Assigned_Price_Increase_%'] = (
+        df['Assigned_Price_Increase_%']
+        .clip(lower=0, upper=global_target * 2)
+    )
+
     
     st.sidebar.markdown("---")
     global_target = st.sidebar.slider("Global % Price Increase Target", 0.5, 10.0, 3.0, step=0.1)
