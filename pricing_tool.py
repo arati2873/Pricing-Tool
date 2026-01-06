@@ -113,27 +113,14 @@ def apply_override(df, key_col, selected_keys, pct_dict, score_col, price_col, r
         st.error(f"❌ You've exceeded the 30,000 SKU limit. Please upgrade to the Pro version.")
         st.stop()
 
-def apply_global_score_increase_safe(df, mask, score_col, target_pct):
-    sub_df = df[mask]
-    if sub_df.empty:
-        return df
-
-    # Step 1: Ensure scores are non-negative
-    scores = sub_df[score_col].clip(lower=0)
-
-    # Step 2: Normalize scores to sum to 1
-    if scores.sum() > 0:
-        normalized_weight = scores / scores.sum()
+def apply_global_score_increase(df, excluded_mask, score_col, target_pct):
+    sub_df = df[excluded_mask]
+    if sub_df[score_col].sum() == 0:
+        df.loc[excluded_mask, 'Assigned_Price_Increase_%'] = target_pct
     else:
-        # If all scores are zero, assign equal weight
-        normalized_weight = pd.Series(1 / len(scores), index=sub_df.index)
-
-    # Step 3: Calculate assigned % increase proportional to score
-    df.loc[mask, 'Assigned_Price_Increase_%'] = normalized_weight * target_pct * len(scores)
-
-    # Step 4: Safety clamp to prevent negative or huge increases
-    df['Assigned_Price_Increase_%'] = df['Assigned_Price_Increase_%'].clip(lower=0, upper=target_pct*2)
-
+        weight = sub_df[score_col]
+        multiplier = target_pct / weight.mean()
+        df.loc[excluded_mask, 'Assigned_Price_Increase_%'] = weight * multiplier
     return df
 
 def adjust_remaining(df, overridden_mask, target_total_revenue):
@@ -270,22 +257,38 @@ if data_loaded:
     from sklearn.preprocessing import MinMaxScaler
     import numpy as np
 
-    def scale_familywise(df, col, inverse=False):
-        scaled_series = pd.Series(index=df.index, dtype=float)
-        for fam, group in df.groupby('Product_Family'):
-            idx = group.index
-            values = group[col].values.reshape(-1, 1)
-            if len(values) > 1:
+    def scale_familywise(df, column, inverse=False):
+        df_result = df.copy()
+        df_result[f'Score_{column}'] = np.nan
+
+        for family in df_result['Product_Family'].unique():
+            mask = df_result['Product_Family'] == family
+            values = df_result.loc[mask, column].astype(float)
+
+            # Replace NaNs and infs with median of valid values
+            valid_values = values.replace([np.inf, -np.inf], np.nan)
+            median_val = valid_values.median()
+            filled_values = valid_values.fillna(median_val).values.reshape(-1, 1)
+            
+            if filled_values.max() == filled_values.min():
+                df_result.loc[mask, f'Score_{column}'] = 8  # neutral score
+                continue
+
+
+            try:
                 scaler = MinMaxScaler(feature_range=(1, 15))
-                scaled_vals = scaler.fit_transform(values).flatten()
+                scaled_vals = scaler.fit_transform(filled_values).flatten()
+
                 if inverse:
-                    scaled_vals = 16 - scaled_vals
-            else:
-                scaled_vals = np.array([8.0])  # Midpoint for single-item families
-            scaled_series.loc[idx] = scaled_vals
-        # If any remaining NaNs (e.g. missing Product_Family), fill with midpoint
-        scaled_series = scaled_series.fillna(8.0)
-        return scaled_series
+                    scaled_vals = 16 - scaled_vals  # Invert the score
+
+                df_result.loc[mask, f'Score_{column}'] = scaled_vals
+            except Exception as e:
+                print(f"❌ Error scaling Product_Family '{family}': {e}")
+                continue
+
+        return df_result[f'Score_{column}']
+
 
 
     if 'Cost_Change_%' in df.columns and df['Cost_Change_%'].notna().any():
@@ -371,66 +374,9 @@ if data_loaded:
     
     #df['Total_Score'] = scale_familywise(df, 'Total_Score')
 
-    # -------------------------------------------------
-    # Ensure numeric columns
-    # -------------------------------------------------
-    numeric_cols = ['Revenue_1', 'Price_Today', 'TTL_Cost']
-    for col in numeric_cols:
-        df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
 
-    # -------------------------------------------------
-    # Initialize Assigned Price Increase
-    # -------------------------------------------------
-    df['Assigned_Price_Increase_%'] = np.nan
-
-    # Mask for all valid SKUs (no overrides yet)
-    all_skus_mask = df['SKU'].notna()
-
-    # -------------------------------------------------
-    # Score cleanup
-    # -------------------------------------------------
-    df['Total_Score'] = (
-        pd.to_numeric(df['Total_Score'], errors='coerce')
-        .fillna(0)
-        .clip(lower=0)
-    )
-
-    # -------------------------------------------------
-    # Compute proportional price increases
-    # -------------------------------------------------
-    if all_skus_mask.sum() > 0:
-        scores = df.loc[all_skus_mask, 'Total_Score']
-        total_score_sum = scores.sum()
-
-        if total_score_sum > 0:
-            normalized = scores / total_score_sum
-        else:
-            # Fallback: equal allocation if all scores are zero
-            normalized = pd.Series(
-                1 / len(scores),
-                index=scores.index
-            )
-
-        # ✅ Index-safe assignment
-            df.loc[normalized.index, 'Assigned_Price_Increase_%'] = (
-        normalized.values * global_target
-    )
-
-    # -------------------------------------------------
-    # Clamp to avoid extreme values
-    # -------------------------------------------------
-    df['Assigned_Price_Increase_%'] = (
-        df['Assigned_Price_Increase_%']
-        .clip(lower=0, upper=float(global_target) * 2)
-    )
-
-    
     st.sidebar.markdown("---")
     global_target = st.sidebar.slider("Global % Price Increase Target", 0.5, 10.0, 3.0, step=0.1)
-    global_target = pd.to_numeric(global_target, errors='coerce')
-
-    if pd.isna(global_target):
-        global_target = 0
     
     st.sidebar.markdown("### Inventory & Sales Coverage")
 
@@ -458,21 +404,28 @@ if data_loaded:
 
     # 3. Apply Global Increase to remaining SKUs
     non_overridden_mask = df['Assigned_Price_Increase_%'].isna()
-    df = apply_global_score_increase_safe(df, non_overridden_mask, 'Score_Normalized', global_target)
+    df = apply_global_score_increase(df, non_overridden_mask, 'Score_Normalized', global_target)
 
 
     df['Estimated_Qty'] = df['Revenue_1'] / df['ASP_1']
     df['New_Price'] = df['Price_Today'] * (1 + df['Assigned_Price_Increase_%'] / 100)
-    df['New_Revenue'] = df['Revenue_1'] * (df['New_Price'] / df['Price_Today'])
-    #df['New_Revenue'] = df['Revenue_1'] * (1 + df['Assigned_Price_Increase_%'] / 100)
+    df['New_Revenue'] = df['Revenue_1'] * (1 + df['Assigned_Price_Increase_%'] / 100)
 
     #df['TTL_Cost'] = df['Revenue_1'] * (1 - df['GM%_1'] / 100)
     # Clean and convert relevant columns to numeric
-    df['TTL_Cost'] = pd.to_numeric(df['TTL_Cost'], errors='coerce').fillna(0)
-    df['Cost_Change_%'] = pd.to_numeric(df['Cost_Change_%'], errors='coerce').fillna(0)
-    impact_fraction = (total_months - stock_months) / total_months
+    df['TTL_Cost'] = pd.to_numeric(df['TTL_Cost'], errors='coerce')
+    df['Cost_Change_%'] = pd.to_numeric(df['Cost_Change_%'], errors='coerce')
+
+    # Now safely perform the calculation
     df['Theoretical_New_Cost'] = df['TTL_Cost'] * (1 + df['Cost_Change_%'] / 100)
+
+    # Optional: Fill NaNs if any
+    df['Theoretical_New_Cost'] = df['Theoretical_New_Cost'].fillna(0)
+
     df['New_Cost'] = df['TTL_Cost'] + (df['Theoretical_New_Cost'] - df['TTL_Cost']) * impact_fraction
+    #df.drop(columns=['Theoretical_New_Cost'], inplace=True)
+
+
 
     total_old_revenue = df['Revenue_1'].sum()
     target_total_revenue = total_old_revenue * (1 + global_target / 100)
