@@ -215,7 +215,7 @@ if data_loaded:
     df['Qty_2'] = pd.to_numeric(df['Qty_2'], errors='coerce')
 
     
-    df['Qty_Change_%'] = ((df['Qty_1'] - df['  ']) / df['Qty_2'].replace(0, np.nan)) * 100
+    df['Qty_Change_%'] = ((df['Qty_1'] - df['Qty_2']) / df['Qty_2'].replace(0, np.nan)) * 100
     df['ASP_Change_%'] = ((df['ASP_1'] - df['ASP_2']) / df['ASP_2'].replace(0, np.nan)) * 100
 
     # Handle NaNs or inf values
