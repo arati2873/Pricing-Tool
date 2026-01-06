@@ -77,7 +77,7 @@ if all(uploaded_files.values()):
     data_loaded = True
     file_paths = uploaded_files
 else:
-    #st.warning("⚠️ Please upload all five input files to continue.")
+    st.warning("⚠️ Please upload all five input files to continue.")
     data_loaded = False
 
     
@@ -641,5 +641,5 @@ def safe_growth_pct(new, old):
     csv = df[['SKU', 'Product_Family', 'Price_Today', 'Assigned_Price_Increase_%',
               'New_Price', 'Revenue_1', 'New_Revenue']].round(2).to_csv(index=False)
     st.download_button("📥 Download SKU-Level Price Plan", data=csv, file_name="price_revision_output.csv")
-else:
-    st.warning("⚠️ Please upload all six input files to start.")
+#else:
+#    st.warning("⚠️ Please upload all six input files to start.")
