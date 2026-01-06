@@ -366,7 +366,19 @@ if data_loaded:
     )/10
     
     #df['Total_Score'] = scale_familywise(df, 'Total_Score')
+    df['Assigned_Price_Increase_%'] = 0.0
 
+    sku_mask = df['SKU'].notna()
+
+    # --- Clean Total_Score ---
+    df.loc[sku_mask, 'Total_Score'] = (
+        pd.to_numeric(df.loc[sku_mask, 'Total_Score'], errors='coerce')
+        .fillna(0)
+        .clip(lower=0)
+    )
+    
+    scores = df.loc[sku_mask, 'Total_Score']
+    score_sum = scores.sum()
 
     st.sidebar.markdown("---")
     global_target = st.sidebar.slider("Global % Price Increase Target", 0.5, 10.0, 3.0, step=0.1)
@@ -383,8 +395,26 @@ if data_loaded:
     selected_groups = st.sidebar.multiselect("Override: Select Product Groups", groups)
 
     # Normalize score
-    df['Score_Normalized'] = df['Total_Score']
-    df['Assigned_Price_Increase_%'] = np.nan
+    if score_sum > 0:
+        normalized = scores / score_sum
+    else:
+        # Equal allocation if all scores are zero
+        normalized = pd.Series(
+            1 / sku_mask.sum(),
+            index=df.loc[sku_mask].index
+        )
+        
+     # --- Assign to ALL SKUs ---
+    df.loc[sku_mask, 'Assigned_Price_Increase_%'] = (
+        normalized * float(global_target)
+    )
+
+    # --- Safety clamp ---
+    df['Assigned_Price_Increase_%'] = (
+        df['Assigned_Price_Increase_%']
+        .fillna(0)
+        .clip(lower=0, upper=float(global_target) * 2)
+    )
 
     # 1. Apply Product Group Overrides (Most granular)
     group_overrides = {grp: st.sidebar.slider(f"{grp} % Increase", 0.0, 20.0, 5.0, 0.5) for grp in selected_groups}
@@ -647,3 +677,4 @@ if data_loaded:
     st.download_button("📥 Download SKU-Level Price Plan", data=csv, file_name="price_revision_output.csv")
 else:
     st.warning("⚠️ Please upload all six input files to start.")
+
