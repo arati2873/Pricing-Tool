@@ -203,8 +203,7 @@ def safe_growth_pct(new, old):
     return np.where(
         old == 0,
         np.where(new > 0, 100.0, 0.0),
-        ((new - old) / old) * 100
-    )
+        ((new - old) / old) * 100)
 
     df['Revenue_Growth_%'] = safe_growth_pct(df['Revenue_1'], df['Revenue_2'])
     df['Price_Change_%'] = safe_growth_pct(df['ASP_1'], df['ASP_2'])
