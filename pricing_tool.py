@@ -107,11 +107,11 @@ def apply_override(df, key_col, selected_keys, pct_dict, score_col, price_col, r
 
     return df
 
-    sku_count = df['SKU'].nunique()
+    #sku_count = df['SKU'].nunique()
 
-    if not IS_PRO_VERSION and sku_count > BASIC_SKU_LIMIT:
-        st.error(f"❌ You've exceeded the 30,000 SKU limit. Please upgrade to the Pro version.")
-        st.stop()
+    #if not IS_PRO_VERSION and sku_count > BASIC_SKU_LIMIT:
+    #    st.error(f"❌ You've exceeded the 30,000 SKU limit. Please upgrade to the Pro version.")
+    #    st.stop()
 
 def apply_global_score_increase(df, excluded_mask, score_col, target_pct):
     sub_df = df[excluded_mask]
@@ -145,13 +145,16 @@ def summarize_revenue(df, group_col):
         New_Cost=('New_Cost', 'sum')
     ).reset_index()
 
-    summary['Revenue_Increase_%'] = (
-        (summary['Total_Revenue_New'] - summary['Total_Revenue_Old']) / summary['Total_Revenue_Old']
-    ) * 100
+    summary['Revenue_Increase_%'] = safe_growth_pct(
+        summary['Total_Revenue_New'],
+        summary['Total_Revenue_Old']
+    )
 
-    summary['Cost_Increase_%'] = (
-        (summary['New_Cost'] - summary['TTL_Cost']) / summary['TTL_Cost']
-    ) * 100
+    summary['Cost_Increase_%'] = safe_growth_pct(
+        summary['New_Cost'],
+        summary['TTL_Cost']
+    )
+
 
     summary['Old_GM'] = summary['Total_Revenue_Old'] - summary['TTL_Cost']
     summary['New_GM'] = summary['Total_Revenue_New'] - summary['New_Cost']
@@ -190,6 +193,14 @@ if data_loaded:
     df = df.merge(cost_df, on='SKU', how='left')
     df = df.merge(price_today, on='SKU', how='left')
     df = df.merge(product_class, on='SKU', how='left')
+    
+    def safe_growth_pct(new, old):
+    return np.where(
+        old == 0,
+        np.where(new > 0, 100.0, 0.0),
+        ((new - old) / old) * 100
+    )
+
 
     # 🧼 Ensure numeric
     #numeric_cols = ['Revenue_1', 'Revenue_2', 'GM%_1', 'GM%_2', 'GM_1', 'GM_2', 'ASP_1', 'ASP_2','TTL_Cost','Qty','Cost_per_Unit']
@@ -197,30 +208,14 @@ if data_loaded:
      #   df = clean_numeric_column(df, col)
 
     # ✅ Calculations
-    df['Sales_Growth_%'] = (
-        (df['Revenue_1'] - df['Revenue_2']) /
-        df['Revenue_2'].replace(0, np.nan)) * 100
+    df['Revenue_Growth_%'] = safe_growth_pct(df['Revenue_1'], df['Revenue_2'])
+    df['Price_Change_%']   = safe_growth_pct(df['ASP_1'], df['ASP_2'])
+    df['GM_Abs_Change']    = safe_growth_pct(df['GM_1'], df['GM_2'])
+    df['Qty_Change_%']     = safe_growth_pct(df['Qty_1'], df['Qty_2'])
+    df['ASP_Change_%']     = safe_growth_pct(df['ASP_1'], df['ASP_2'])
 
-    df['Sales_Growth_%'] = (
-        df['Sales_Growth_%']
-        .replace([np.inf, -np.inf], np.nan)
-        .fillna(0))
+    df['GM%_Change'] = df['GM%_1'].fillna(0) - df['GM%_2'].fillna(0)
 
-    df['GM%_Change'] = df['GM%_1'] - df['GM%_2']
-    df['Price_Change_%'] = ((df['ASP_1'] - df['ASP_2']) / df['ASP_2']) * 100
-    df['GM_Abs_Change'] = df['GM_1'] - df['GM_2']
-    # Calculate % change in Qty and ASP
-    
-    df['Qty_1'] = pd.to_numeric(df['Qty_1'], errors='coerce')
-    df['Qty_2'] = pd.to_numeric(df['Qty_2'], errors='coerce')
-
-    
-    df['Qty_Change_%'] = ((df['Qty_1'] - df['Qty_2']) / df['Qty_2'].replace(0, np.nan)) * 100
-    df['ASP_Change_%'] = ((df['ASP_1'] - df['ASP_2']) / df['ASP_2'].replace(0, np.nan)) * 100
-
-    # Handle NaNs or inf values
-    df['Qty_Change_%'] = df['Qty_Change_%'].replace([np.inf, -np.inf], 0).fillna(0)
-    df['ASP_Change_%'] = df['ASP_Change_%'].replace([np.inf, -np.inf], 0).fillna(0)
     
     
 
