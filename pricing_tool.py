@@ -377,6 +377,7 @@ if data_loaded:
         df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
 
     # Mask for all SKUs (no overrides yet)
+    df['Assigned_Price_Increase_%'] = np.nan
     all_skus_mask = df['Assigned_Price_Increase_%'].isna() & df['SKU'].notna()
     # Step 1: Make sure scores are non-negative
     df['Total_Score'] = df['Total_Score'].clip(lower=0)
