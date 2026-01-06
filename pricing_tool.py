@@ -394,7 +394,9 @@ if data_loaded:
         normalized = pd.Series(1 / all_skus_mask.sum(), index=df.loc[all_skus_mask].index)  # equal allocation if scores are zero
 
     # Assign Assigned_Price_Increase_% based on normalized score and global target
-    df.loc[all_skus_mask, 'Assigned_Price_Increase_%'] = normalized * global_target
+    df.loc[normalized.index, 'Assigned_Price_Increase_%'] = (
+    normalized.values * global_target
+    )
     # Optional: Clamp extreme increases to reasonable range (0-2x global target)
     df['Assigned_Price_Increase_%'] = df['Assigned_Price_Increase_%'].clip(lower=0, upper=global_target*2)
     
