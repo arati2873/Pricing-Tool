@@ -208,7 +208,7 @@ if data_loaded:
      #   df = clean_numeric_column(df, col)
 
     # ✅ Calculations
-    df['Revenue_Growth_%'] = safe_growth_pct(df['Revenue_1'], df['Revenue_2'])
+    df['Sales_Growth_%'] = safe_growth_pct(df['Revenue_1'], df['Revenue_2'])
     df['Price_Change_%']   = safe_growth_pct(df['ASP_1'], df['ASP_2'])
     df['GM_Abs_Change']    = safe_growth_pct(df['GM_1'], df['GM_2'])
     df['Qty_Change_%']     = safe_growth_pct(df['Qty_1'], df['Qty_2'])
