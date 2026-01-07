@@ -400,7 +400,7 @@ if data_loaded:
 
     # 1. Apply Product Group Overrides (Most granular)
     group_overrides = {grp: st.sidebar.slider(f"{grp} % Increase", 0.0, 20.0, 5.0, 0.5) for grp in selected_groups}
-    df = apply_override(df, 'Product_Group', selected_groups, group_overrides,  , 'Revenue_1', 'ASP_1')
+    df = apply_override(df, 'Product_Group', selected_groups, group_overrides, 'Score_Normalized' , 'Price_Today','Revenue_1', 'ASP_1')
 
     # 2. Apply Product Family Overrides (only where Group not overridden)
     remaining_family_candidates = set(selected_families) - set(df[df['Assigned_Price_Increase_%'].notna()]['Product_Family'])
