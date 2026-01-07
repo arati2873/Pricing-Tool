@@ -191,7 +191,20 @@ if data_loaded:
     df = df.merge(price_today, on='SKU', how='left')
     df = df.merge(product_class, on='SKU', how='left')
     
+    # After merging all your dataframes into df
     df['Has_Price_Today'] = df['Price_Today'].notna() & (df['Price_Today'] > 0)
+    
+    # SKUs without price
+    missing_price_df = df[~df['Has_Price_Today']].copy()
+    
+    if not missing_price_df.empty:
+    st.warning(f"⚠️ {len(missing_price_df)} SKUs are missing current prices. These SKUs omitted from analysis.")
+    csv_missing_price = missing_price_df[['SKU','Product_Family','Product_Group','Price_Today']].to_csv(index=False)
+    st.download_button("📥 Download SKUs Missing Price", data=csv_missing_price, file_name="missing_price_skus.csv")
+    
+    df_valid = df[df['Has_Price_Today']].copy()
+    df_old = df
+    df = df_valid
 
 
     # 🧼 Ensure numeric
