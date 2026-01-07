@@ -107,11 +107,11 @@ def apply_override(df, key_col, selected_keys, pct_dict, score_col, price_col, r
 
     return df
 
-    #sku_count = df['SKU'].nunique()
+    sku_count = df['SKU'].nunique()
 
-    #if not IS_PRO_VERSION and sku_count > BASIC_SKU_LIMIT:
-    #    st.error(f"❌ You've exceeded the 30,000 SKU limit. Please upgrade to the Pro version.")
-    #    st.stop()
+    if not IS_PRO_VERSION and sku_count > BASIC_SKU_LIMIT:
+        st.error(f"❌ You've exceeded the 30,000 SKU limit. Please upgrade to the Pro version.")
+        st.stop()
 
 def apply_global_score_increase(df, excluded_mask, score_col, target_pct):
     sub_df = df[excluded_mask]
@@ -145,16 +145,13 @@ def summarize_revenue(df, group_col):
         New_Cost=('New_Cost', 'sum')
     ).reset_index()
 
-    summary['Revenue_Increase_%'] = safe_growth_pct(
-        summary['Total_Revenue_New'],
-        summary['Total_Revenue_Old']
-    )
+    summary['Revenue_Increase_%'] = (
+        (summary['Total_Revenue_New'] - summary['Total_Revenue_Old']) / summary['Total_Revenue_Old']
+    ) * 100
 
-    summary['Cost_Increase_%'] = safe_growth_pct(
-        summary['New_Cost'],
-        summary['TTL_Cost']
-    )
-
+    summary['Cost_Increase_%'] = (
+        (summary['New_Cost'] - summary['TTL_Cost']) / summary['TTL_Cost']
+    ) * 100
 
     summary['Old_GM'] = summary['Total_Revenue_Old'] - summary['TTL_Cost']
     summary['New_GM'] = summary['Total_Revenue_New'] - summary['New_Cost']
@@ -193,14 +190,6 @@ if data_loaded:
     df = df.merge(cost_df, on='SKU', how='left')
     df = df.merge(price_today, on='SKU', how='left')
     df = df.merge(product_class, on='SKU', how='left')
-    
-    def safe_growth_pct(new, old):
-        return np.where(
-            old == 0,
-            np.where(new > 0, 100.0, 0.0),
-            ((new - old) / old) * 100
-        )
-
 
     # 🧼 Ensure numeric
     #numeric_cols = ['Revenue_1', 'Revenue_2', 'GM%_1', 'GM%_2', 'GM_1', 'GM_2', 'ASP_1', 'ASP_2','TTL_Cost','Qty','Cost_per_Unit']
@@ -208,16 +197,34 @@ if data_loaded:
      #   df = clean_numeric_column(df, col)
 
     # ✅ Calculations
-    df['Sales_Growth_%'] = safe_growth_pct(df['Revenue_1'], df['Revenue_2'])
-    df['Price_Change_%']   = safe_growth_pct(df['ASP_1'], df['ASP_2'])
-    df['GM_Abs_Change']    = safe_growth_pct(df['GM_1'], df['GM_2'])
-    df['Qty_Change_%']     = safe_growth_pct(df['Qty_1'], df['Qty_2'])
-    df['ASP_Change_%']     = safe_growth_pct(df['ASP_1'], df['ASP_2'])
+    df['Sales_Growth_%'] = (
+    (df['Revenue_1'] - df['Revenue_2']) /
+    df['Revenue_2'].replace(0, np.nan)
+    ) * 100
 
-    df['GM%_Change'] = df['GM%_1'].fillna(0) - df['GM%_2'].fillna(0)
+    df['Sales_Growth_%'] = (
+        df['Sales_Growth_%']
+        .replace([np.inf, -np.inf], np.nan)
+        .fillna(0)
+    )
+
+    df['GM%_Change'] = df['GM%_1'] - df['GM%_2']
+    df['Price_Change_%'] = ((df['ASP_1'] - df['ASP_2']) / df['ASP_2']) * 100
+    df['GM_Abs_Change'] = df['GM_1'] - df['GM_2']
+    # Calculate % change in Qty and ASP
+    
+    df['Qty_1'] = pd.to_numeric(df['Qty_1'], errors='coerce')
+    df['Qty_2'] = pd.to_numeric(df['Qty_2'], errors='coerce')
 
     
-    
+    df['Qty_Change_%'] = ((df['Qty_1'] - df['Qty_2']) / df['Qty_2'].replace(0, np.nan)) * 100
+    df['ASP_Change_%'] = ((df['ASP_1'] - df['ASP_2']) / df['ASP_2'].replace(0, np.nan)) * 100
+
+    # Handle NaNs or inf values
+    df['Qty_Change_%'] = df['Qty_Change_%'].replace([np.inf, -np.inf], 0).fillna(0)
+    df['ASP_Change_%'] = df['ASP_Change_%'].replace([np.inf, -np.inf], 0).fillna(0)
+
+
 
     #df['Revenue_1'] = df['Revenue_1'].fillna(0)
     #df['Revenue_2'] = df['Revenue_2'].fillna(0)
@@ -366,20 +373,7 @@ if data_loaded:
     )/10
     
     #df['Total_Score'] = scale_familywise(df, 'Total_Score')
-    df['Score_Normalized'] = normalize_scores(df, 'Total_Score')
-    df['Assigned_Price_Increase_%'] = 0.0
 
-    sku_mask = df['SKU'].notna()
-
-    # --- Clean Total_Score ---
-    df.loc[sku_mask, 'Total_Score'] = (
-        pd.to_numeric(df.loc[sku_mask, 'Score_Normalized'], errors='coerce')
-        .fillna(0)
-        .clip(lower=0)
-    )
-    
-    scores = df.loc[sku_mask, 'Total_Score']
-    score_sum = scores.sum()
 
     st.sidebar.markdown("---")
     global_target = st.sidebar.slider("Global % Price Increase Target", 0.5, 10.0, 3.0, step=0.1)
@@ -396,26 +390,8 @@ if data_loaded:
     selected_groups = st.sidebar.multiselect("Override: Select Product Groups", groups)
 
     # Normalize score
-    if score_sum > 0:
-        normalized = scores / score_sum
-    else:
-        # Equal allocation if all scores are zero
-        normalized = pd.Series(
-            1 / sku_mask.sum(),
-            index=df.loc[sku_mask].index
-        )
-        
-     # --- Assign to ALL SKUs ---
-    df.loc[sku_mask, 'Assigned_Price_Increase_%'] = (
-        normalized * float(global_target)
-    )
-
-    # --- Safety clamp ---
-    df['Assigned_Price_Increase_%'] = (
-        df['Assigned_Price_Increase_%']
-        .fillna(0)
-        .clip(lower=0, upper=float(global_target) * 2)
-    )
+    df['Score_Normalized'] = df['Total_Score']
+    df['Assigned_Price_Increase_%'] = np.nan
 
     # 1. Apply Product Group Overrides (Most granular)
     group_overrides = {grp: st.sidebar.slider(f"{grp} % Increase", 0.0, 20.0, 5.0, 0.5) for grp in selected_groups}
@@ -428,7 +404,7 @@ if data_loaded:
 
     # 3. Apply Global Increase to remaining SKUs
     non_overridden_mask = df['Assigned_Price_Increase_%'].isna()
-    df = apply_global_score_increase(df, non_overridden_mask, 'Total_Score', global_target)
+    df = apply_global_score_increase(df, non_overridden_mask, 'Score_Normalized', global_target)
 
 
     df['Estimated_Qty'] = df['Revenue_1'] / df['ASP_1']
@@ -678,4 +654,3 @@ if data_loaded:
     st.download_button("📥 Download SKU-Level Price Plan", data=csv, file_name="price_revision_output.csv")
 else:
     st.warning("⚠️ Please upload all six input files to start.")
-
