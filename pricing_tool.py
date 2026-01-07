@@ -596,46 +596,11 @@ if data_loaded:
     # --------------------------------------------
     # 4️⃣ Score vs Price Increase (Scatter)
     # --------------------------------------------
-    scatter_df = df[df['SKU'].notna()].copy()  # Ensure only SKU-level rows are plotted
 
-    fig4 = px.scatter(
-        scatter_df,
-        x='Total_Score',
-        y='Assigned_Price_Increase_%',
-        size='Revenue_1',  # Size based on SKU revenue
-        color='Product_Family',
-        title='📈 Score vs Assigned Price Increase %',
-        labels={
-            'Total_Score': 'Composite Score',
-            'Assigned_Price_Increase_%': 'Price Increase (%)',
-            'Revenue_1': 'Revenue (AED)'
-        },
-        hover_data=['SKU', 'Product_Group', 'Price_Today', 'Revenue_1']
-    )
-
-    fig4.update_traces(marker=dict(opacity=0.75, line=dict(width=0.5, color='DarkSlateGrey')))
-    fig4.update_layout(xaxis_tickformat=".2f", yaxis_tickformat=".2f")
-
-    st.plotly_chart(fig4, use_container_width=True)
     
      # 5️⃣ Revenue Curve vs Price Increase %
     # --------------------------------------------
-    fig5 = px.scatter(
-        df,
-        x='Assigned_Price_Increase_%',
-        y='New_Revenue',
-        size='Revenue_1',
-        color='Product_Family',
-        title='📈 Revenue Curve by Price Increase %',
-        labels={
-            'Assigned_Price_Increase_%': 'Price Increase (%)',
-            'New_Revenue': 'Estimated New Revenue',
-            'Revenue_1': 'Base Revenue'
-        },
-        hover_data=['SKU', 'Total_Score', 'Price_Today']
-    )
-    fig5.update_traces(marker=dict(opacity=0.7, line=dict(width=0.5, color='gray')))
-    st.plotly_chart(fig5, use_container_width=True)
+
 
     # ⬇️ Download CSV with all scoring logic
     csv_score_details = df[[
