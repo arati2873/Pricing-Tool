@@ -223,6 +223,8 @@ if data_loaded:
     # Handle NaNs or inf values
     df['Qty_Change_%'] = df['Qty_Change_%'].replace([np.inf, -np.inf], 0).fillna(0)
     df['ASP_Change_%'] = df['ASP_Change_%'].replace([np.inf, -np.inf], 0).fillna(0)
+    df['GM%_Change'] = df['GM%_Change'].replace([np.inf, -np.inf], 0).fillna(0)
+    df['GM_Abs_Change'] = df['GM_Abs_Change'].replace([np.inf, -np.inf], 0).fillna(0)
 
 
 
