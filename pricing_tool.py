@@ -77,7 +77,7 @@ if all(uploaded_files.values()):
     data_loaded = True
     file_paths = uploaded_files
 else:
-    st.warning("⚠️ Please upload all five input files to continue.")
+    #st.warning("⚠️ Please upload all five input files to continue.")
     data_loaded = False
 
     
@@ -366,13 +366,14 @@ if data_loaded:
     )/10
     
     #df['Total_Score'] = scale_familywise(df, 'Total_Score')
+    df['Score_Normalized'] = normalize_scores(df, 'Total_Score')
     df['Assigned_Price_Increase_%'] = 0.0
 
     sku_mask = df['SKU'].notna()
 
     # --- Clean Total_Score ---
     df.loc[sku_mask, 'Total_Score'] = (
-        pd.to_numeric(df.loc[sku_mask, 'Total_Score'], errors='coerce')
+        pd.to_numeric(df.loc[sku_mask, 'Score_Normalized'], errors='coerce')
         .fillna(0)
         .clip(lower=0)
     )
@@ -427,7 +428,7 @@ if data_loaded:
 
     # 3. Apply Global Increase to remaining SKUs
     non_overridden_mask = df['Assigned_Price_Increase_%'].isna()
-    df = apply_global_score_increase(df, non_overridden_mask, 'Score_Normalized', global_target)
+    df = apply_global_score_increase(df, non_overridden_mask, 'Total_Score', global_target)
 
 
     df['Estimated_Qty'] = df['Revenue_1'] / df['ASP_1']
