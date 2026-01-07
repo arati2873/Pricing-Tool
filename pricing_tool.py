@@ -190,6 +190,9 @@ if data_loaded:
     df = df.merge(cost_df, on='SKU', how='left')
     df = df.merge(price_today, on='SKU', how='left')
     df = df.merge(product_class, on='SKU', how='left')
+    
+    df['Has_Price_Today'] = df['Price_Today'].notna() & (df['Price_Today'] > 0)
+
 
     # 🧼 Ensure numeric
     #numeric_cols = ['Revenue_1', 'Revenue_2', 'GM%_1', 'GM%_2', 'GM_1', 'GM_2', 'ASP_1', 'ASP_2','TTL_Cost','Qty','Cost_per_Unit']
@@ -397,7 +400,7 @@ if data_loaded:
 
     # 1. Apply Product Group Overrides (Most granular)
     group_overrides = {grp: st.sidebar.slider(f"{grp} % Increase", 0.0, 20.0, 5.0, 0.5) for grp in selected_groups}
-    df = apply_override(df, 'Product_Group', selected_groups, group_overrides, 'Score_Normalized', 'Price_Today', 'Revenue_1', 'ASP_1')
+    df = apply_override(df, 'Product_Group', selected_groups, group_overrides,  , 'Revenue_1', 'ASP_1')
 
     # 2. Apply Product Family Overrides (only where Group not overridden)
     remaining_family_candidates = set(selected_families) - set(df[df['Assigned_Price_Increase_%'].notna()]['Product_Family'])
@@ -407,10 +410,11 @@ if data_loaded:
     # 3. Apply Global Increase to remaining SKUs
     non_overridden_mask = df['Assigned_Price_Increase_%'].isna()
     df = apply_global_score_increase(df, non_overridden_mask, 'Score_Normalized', global_target)
+    df['Assigned_Price_Increase_%'] = df['Assigned_Price_Increase_%'].fillna(global_target)
 
 
     df['Estimated_Qty'] = df['Revenue_1'] / df['ASP_1']
-    df['New_Price'] = df['Price_Today'] * (1 + df['Assigned_Price_Increase_%'] / 100)
+    df['New_Price'] = np.where(df['Has_Price_Today'], df['Price_Today'] * (1 + df['Assigned_Price_Increase_%'] / 100),np.nan)
     df['New_Revenue'] = df['Revenue_1'] * (1 + df['Assigned_Price_Increase_%'] / 100)
 
     #df['TTL_Cost'] = df['Revenue_1'] * (1 - df['GM%_1'] / 100)
@@ -438,7 +442,7 @@ if data_loaded:
 
     # Final adjustment for total increase
     df['New_Revenue'] = df['Revenue_1'] * (1 + df['Assigned_Price_Increase_%'] / 100)
-    df['Assigned_Price_Increase_%'] = (df['New_Price'] / df['Price_Today'] - 1) * 100
+    #df['Assigned_Price_Increase_%'] = (df['New_Price'] / df['Price_Today'] - 1) * 100
 
     full_summary = summarize_revenue(df,'Product_Family')
 
@@ -600,6 +604,16 @@ if data_loaded:
     
      # 5️⃣ Revenue Curve vs Price Increase %
     # --------------------------------------------
+    
+    missing_price_skus = df[~df['Has_Price_Today']]
+
+    if not missing_price_skus.empty:
+        st.warning(f"⚠️ {len(missing_price_skus)} SKUs do not have Price_Today. "
+                   "Price increase % applied, but New Price cannot be calculated.")
+        st.dataframe(
+            missing_price_skus[['SKU', 'Product_Family', 'Revenue_1', 'Assigned_Price_Increase_%']]
+        )
+
 
 
     # ⬇️ Download CSV with all scoring logic
