@@ -19,7 +19,7 @@ st.title("📈 Intelligent Price Revision Tool")
 
 st.info("🔒 Your data is not stored or shared. Files are processed securely within your session for analysis only.")
 
-st.sidebar.markdown("[🛒 Buy Access - $99](https://yadavarati.gumroad.com/l/IntelligentPriceRevisionTool)")
+st.sidebar.markdown("[🛒 Buy Access - $9,499](https://yadavarati.gumroad.com/l/IntelligentPriceRevisionTool)")
 
 # --- Access Gate ---
 ACCESS_CODE = "A"
@@ -223,6 +223,12 @@ if data_loaded:
         .replace([np.inf, -np.inf], np.nan)
         .fillna(0)
     )
+    
+    df['MSP'] = pd.to_numeric(df['MSP'], errors='coerce')
+    df['MSP_Distance_%'] = (
+        (df['Price_Today'] - df['MSP']) / df['MSP']
+    )
+    
 
     df['GM%_Change'] = df['GM%_1'] - df['GM%_2']
     df['Price_Change_%'] = ((df['ASP_1'] - df['ASP_2']) / df['ASP_2']) * 100
@@ -241,6 +247,7 @@ if data_loaded:
     df['ASP_Change_%'] = df['ASP_Change_%'].replace([np.inf, -np.inf], 0).fillna(0)
     df['GM%_Change'] = df['GM%_Change'].replace([np.inf, -np.inf], 0).fillna(0)
     df['GM_Abs_Change'] = df['GM_Abs_Change'].replace([np.inf, -np.inf], 0).fillna(0)
+    df['MSP_Distance_%'] = df['MSP_Distance_%'].replace([np.inf, -np.inf], 0).fillna(0)
 
 
 
@@ -323,6 +330,7 @@ if data_loaded:
     df['Score_GM_Abs_Change'] = scale_familywise(df, 'GM_Abs_Change')
     df['Score_Qty_Change'] = scale_familywise(df, 'Qty_Change_%')
     df['Score_ASP_Change'] = scale_familywise(df, 'ASP_Change_%')
+    df['Score_MSP_Distance'] = scale_familywise(df, 'MSP_Distance_%')
 
 
     # 2. Use a visible checkbox toggle with label
@@ -330,9 +338,9 @@ if data_loaded:
 
     # 3. Define presets
     preset_options = {
-        "Balanced (Default)": {"Sales_Growth": 10, "Cost_Change": 10, "GM%_Change": 10, "Qty_Change": 10,"ASP_Change": 10, "GM_Abs_Change": 10},
-        "Aggressive (Push ASP)": {"Sales_Growth": 20, "Cost_Change": 10, "GM%_Change": 15, "Qty_Change": 50,"ASP_Change": 30, "GM_Abs_Change": 15},
-        "Defensive (Protect GM)": {"Sales_Growth": 30, "Cost_Change": 25, "GM%_Change": 25, "Qty_Change": 10,"ASP_Change": 30, "GM_Abs_Change": 10},
+        "Balanced (Default)": {"Sales_Growth": 10, "Cost_Change": 10, "GM%_Change": 10, "Qty_Change": 10,"ASP_Change": 10, "GM_Abs_Change": 10,"MSP_Distance":10},
+        "Aggressive (Push ASP)": {"Sales_Growth": 20, "Cost_Change": 10, "GM%_Change": 15, "Qty_Change": 50,"ASP_Change": 30, "GM_Abs_Change": 15,"MSP_Distance":10},
+        "Defensive (Protect GM)": {"Sales_Growth": 30, "Cost_Change": 25, "GM%_Change": 25, "Qty_Change": 10,"ASP_Change": 30, "GM_Abs_Change": 10,"MSP_Distance":10},
     }
 
     # 4. Session state to store current weights
@@ -380,14 +388,15 @@ if data_loaded:
         total_weight = sum(weights.values())
         normalized_weights = {k: v / total_weight for k, v in weights.items()}
 
-    # 3. Now compute Total_Score using normalized_weights
+    # 3. Now compute Total_Score using normalized_weights 
     df['Total_Score'] = (
         df['Score_Sales_Growth'] * weights['Sales_Growth'] +
         df['Score_Cost_Change'] * weights['Cost_Change'] +
         df['Score_GM_Change'] * weights['GM%_Change'] +
         df['Score_GM_Abs_Change'] * weights['GM_Abs_Change'] +
         df['Score_Qty_Change'] * weights['Qty_Change'] +
-        df['Score_ASP_Change'] * weights['ASP_Change']
+        df['Score_ASP_Change'] * weights['ASP_Change'] +
+        df['Score_MSP_Distance'] * weights['MSP_Distance']
     )/10
     
     #df['Total_Score'] = scale_familywise(df, 'Total_Score')
@@ -427,7 +436,7 @@ if data_loaded:
 
 
     df['Estimated_Qty'] = df['Revenue_1'] / df['ASP_1']
-    df['New_Price'] = np.where(df['Has_Price_Today'], df['Price_Today'] * (1 + df['Assigned_Price_Increase_%'] / 100),np.nan)
+    df['New_Price'] = df['Price_Today'] * (1 + df['Assigned_Price_Increase_%'] / 100) 
     df['New_Revenue'] = df['Revenue_1'] * (1 + df['Assigned_Price_Increase_%'] / 100)
 
     #df['TTL_Cost'] = df['Revenue_1'] * (1 - df['GM%_1'] / 100)
@@ -624,10 +633,10 @@ if data_loaded:
     # ⬇️ Download CSV with all scoring logic
     csv_score_details = df[[
         'SKU','Product_Family','Product_Group', 'Revenue_1','GM_1','Cost_Per_Unit_1','ASP_1','GM%_1','TTL_Cost','Qty_1',
-        'Revenue_2','GM_2','Cost_Per_Unit_2','ASP_2','GM%_2','Qty_2',
+        'Revenue_2','GM_2','Cost_Per_Unit_2','ASP_2','GM%_2','Qty_2','MSP','MSP_Distance_%',
         'Sales_Growth_%', 'GM%_Change', 'Qty_Change_%','ASP_Change_%', 'Cost_Change_%', 'GM_Abs_Change',
         'Score_Sales_Growth', 'Score_GM_Change', 'Score_Qty_Change','Score_ASP_Change',
-        'Score_Cost_Change', 'Score_GM_Abs_Change', 'Total_Score','Score_Normalized',
+        'Score_Cost_Change', 'Score_GM_Abs_Change','Score_MSP_Distance', 'Total_Score','Score_Normalized',
         'Assigned_Price_Increase_%', 'Price_Today', 'New_Price', 'Revenue_1', 'New_Revenue'
     ]].round(2).to_csv(index=False)
 
